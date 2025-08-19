@@ -1,4 +1,4 @@
-`html
+``html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -593,35 +593,47 @@
 
         // --- Funções de Carregamento de Arquivos ---
         // ######################################################################
-        // ### ALTERAÇÃO INICIA AQUI: Carregamento de múltiplos arquivos ###
+        // ### ALTERAÇÃO INICIA AQUI: Carregamento dinâmico e resiliente a falhas ###
         // ######################################################################
         async function carregarDadosDaURL() {
-            // IMPORTANTE: Esta lista DEVE ser atualizada se os nomes dos arquivos mudarem.
-            const nomesArquivos = [
-                "10864[Atividades]-Cluster Aracatuba_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Baixada Santista_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Bauru_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Campinas_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Limeira_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Mogi_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Ribeirao Preto_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Sao Carlos_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Sao Jose do Rio Preto_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Sao Jose dos Campos_19_08_25.xlsx",
-                "10864[Atividades]-Cluster Sorocaba_19_08_25.xlsx"
-                // Adicione ou remova arquivos aqui conforme necessário
+            // Pega a data atual no formato correto (Ex: 20_08_25)
+            const hoje = new Date();
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0'); // +1 porque os meses começam do 0
+            const ano = hoje.getFullYear().toString().slice(-2);
+            const sufixoData = `${dia}_${mes}_${ano}`; // Cria o formato "20_08_25"
+
+            // Lista base com os nomes dos clusters, SEM a data
+            // Esta lista ainda é fixa, mas o processo abaixo irá ignorar se algum arquivo não existir.
+            const nomeBaseArquivos = [
+                "10864[Atividades]-Cluster Aracatuba",
+                "10864[Atividades]-Cluster Baixada Santista",
+                "10864[Atividades]-Cluster Bauru",
+                "10864[Atividades]-Cluster Campinas",
+                "10864[Atividades]-Cluster Limeira",
+                "10864[Atividades]-Cluster Mogi",
+                "10864[Atividades]-Cluster Ribeirao Preto",
+                "10864[Atividades]-Cluster Sao Carlos",
+                "10864[Atividades]-Cluster Sao Jose do Rio Preto",
+                "10864[Atividades]-Cluster Sao Jose dos Campos",
+                "10864[Atividades]-Cluster Sorocaba"
             ];
 
+            // Monta a lista final de arquivos com a data de hoje
+            const nomesArquivos = nomeBaseArquivos.map(base => `${base}_${sufixoData}.xlsx`);
+            
             const baseURL = "https://dashboardclarobrasil.z15.web.core.windows.net/";
-            folderStatusDiv.textContent = `Buscando ${nomesArquivos.length} arquivos de produção...`;
+            folderStatusDiv.textContent = `Buscando até ${nomesArquivos.length} arquivos de produção para hoje (${dia}/${mes})...`;
             document.getElementById('erro').textContent = '';
 
             // Função auxiliar para buscar e processar um único arquivo
             const fetchAndProcessFile = async (fileName) => {
-                const url = baseURL + fileName;
+                const url = baseURL + encodeURIComponent(fileName); // Usa encodeURIComponent para nomes com caracteres especiais
                 const response = await fetch(url, { cache: 'no-cache' });
                 if (!response.ok) {
-                    throw new Error(`Falha ao buscar ${fileName}`);
+                    // Retorna nulo em vez de um erro para que Promise.allSettled possa identificá-lo como falha.
+                    console.warn(`Não foi possível encontrar ou carregar o arquivo: ${fileName}`);
+                    return null; 
                 }
                 const arrayBuffer = await response.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -647,52 +659,51 @@
                     };
 
                     if (rowData.statusAtividade.toLowerCase().startsWith('cancelled')) {
-                        canceled.push(rowData);
-                        continue;
+                        canceled.push(rowData); continue;
                     }
-                    
-                    const classe = rowData.classe;
-                    if (!["Classe 8", "Classe 9", "Classe 10", "Classe 12", "Classe 14"].includes(classe)) continue;
+                    if (!["Classe 8", "Classe 9", "Classe 10", "Classe 12", "Classe 14"].includes(rowData.classe)) continue;
 
                     const rawCodigoAH = String(get('AH') || '').trim();
                     const matchCompleto = rawCodigoAH.match(/^(\d+)\s*-\s*(.*)$/);
                     let codigoExtraido = '', nomeCodigo = '';
                     if (matchCompleto) {
-                        codigoExtraido = matchCompleto[1];
-                        nomeCodigo = matchCompleto[2].trim();
+                        codigoExtraido = matchCompleto[1]; nomeCodigo = matchCompleto[2].trim();
                     } else {
                         const matchNumero = rawCodigoAH.match(/^(\d+)/);
                         codigoExtraido = matchNumero ? matchNumero[1] : '';
                     }
-                    
                     if (codigoExtraido && nomeCodigo && !codigoNomesMap.has(codigoExtraido)) {
                         codigoNomesMap.set(codigoExtraido, nomeCodigo);
                     }
-
-                    processed.push({
-                        ...rowData,
-                        codigo: codigoExtraido,
-                        nomeCodigo: nomeCodigo,
-                    });
+                    processed.push({ ...rowData, codigo: codigoExtraido, nomeCodigo: nomeCodigo });
                 }
                 return { processed, canceled };
             };
 
             try {
-                // Usa Promise.all para buscar todos os arquivos em paralelo
-                const results = await Promise.all(nomesArquivos.map(fetchAndProcessFile));
+                // Usa Promise.allSettled para que, se um arquivo falhar, os outros continuem.
+                const promises = await Promise.allSettled(nomesArquivos.map(fetchAndProcessFile));
 
-                // Consolida os resultados de todos os arquivos
-                const allProcessed = results.map(r => r.processed).flat();
-                const allCanceled = results.map(r => r.canceled).flat();
+                // Filtra apenas os resultados que foram bem-sucedidos e não são nulos
+                const successfulResults = promises
+                    .filter(p => p.status === 'fulfilled' && p.value)
+                    .map(p => p.value);
+                
+                if (successfulResults.length === 0) {
+                    throw new Error("Nenhum arquivo de rota foi encontrado para a data de hoje.");
+                }
+
+                // Consolida os resultados
+                const allProcessed = successfulResults.map(r => r.processed).flat();
+                const allCanceled = successfulResults.map(r => r.canceled).flat();
                 
                 dadosCanceladosGlobais = allCanceled.map(d => ({ ...d, dateObj: parsePtBrDate(d.data) })).filter(d => d.dateObj);
                 processarEExibirDados(allProcessed);
 
             } catch (error) {
-                console.error('Erro ao carregar ou processar os arquivos da URL:', error);
+                console.error('Erro ao carregar os arquivos da URL:', error);
                 folderStatusDiv.textContent = 'Falha ao carregar dados.';
-                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique se TODOS os arquivos da lista existem no Azure e se os nomes estão corretos.`;
+                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique se seu processo gerou os arquivos com a data de hoje (${sufixoData}).`;
                 renderizarDashboard([], []);
             }
         }
