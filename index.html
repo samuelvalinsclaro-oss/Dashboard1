@@ -217,7 +217,6 @@
         <aside class="sidebar">
             <h1>Dashboard</h1>
             <div class="controls-section">
-                <!-- ALTERAÇÃO: Simplificado para mostrar apenas o status -->
                 <label>1. Status da Carga de Dados</label>
             </div>
             <div class="controls-section">
@@ -401,7 +400,6 @@
         const userEmailDisplay = document.getElementById('user-email');
 
         // Controles do Dashboard
-        // ALTERAÇÃO: Botões de carregar rota removidos da lista de constantes
         const carregarConfirmadosBtn = document.getElementById('carregarConfirmadosBtn');
         const carregarDx22Btn = document.getElementById('carregarDx22Btn');
         const folderStatusDiv = document.getElementById('folderStatus');
@@ -595,32 +593,42 @@
 
         // --- Funções de Carregamento de Arquivos ---
         // ######################################################################
-        // ### ALTERAÇÃO INICIA AQUI: Nova função para carregar dados da URL ###
+        // ### ALTERAÇÃO INICIA AQUI: Carregamento de múltiplos arquivos ###
         // ######################################################################
         async function carregarDadosDaURL() {
-            // IMPORTANTE: Altere o nome do arquivo aqui se for diferente.
-            const nomeArquivoDeDados = 'DADOS_PRODUCAO.xlsx';
-            const urlArquivo = `https://dashboardclarobrasil.z15.web.core.windows.net/${nomeArquivoDeDados}`;
+            // IMPORTANTE: Esta lista DEVE ser atualizada se os nomes dos arquivos mudarem.
+            const nomesArquivos = [
+                "10864[Atividades]-Cluster Aracatuba_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Baixada Santista_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Bauru_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Campinas_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Limeira_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Mogi_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Ribeirao Preto_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Sao Carlos_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Sao Jose do Rio Preto_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Sao Jose dos Campos_19_08_25.xlsx",
+                "10864[Atividades]-Cluster Sorocaba_19_08_25.xlsx"
+                // Adicione ou remova arquivos aqui conforme necessário
+            ];
 
-            folderStatusDiv.textContent = `Buscando dados de produção online...`;
+            const baseURL = "https://dashboardclarobrasil.z15.web.core.windows.net/";
+            folderStatusDiv.textContent = `Buscando ${nomesArquivos.length} arquivos de produção...`;
             document.getElementById('erro').textContent = '';
 
-            try {
-                // Usamos { cache: 'no-cache' } para garantir que o navegador busque a versão mais recente
-                const response = await fetch(urlArquivo, { cache: 'no-cache' });
-
+            // Função auxiliar para buscar e processar um único arquivo
+            const fetchAndProcessFile = async (fileName) => {
+                const url = baseURL + fileName;
+                const response = await fetch(url, { cache: 'no-cache' });
                 if (!response.ok) {
-                    throw new Error(`Não foi possível baixar o arquivo. Status: ${response.status} ${response.statusText}`);
+                    throw new Error(`Falha ao buscar ${fileName}`);
                 }
-
                 const arrayBuffer = await response.arrayBuffer();
-                
-                // A lógica de parse foi movida para cá, usando o buffer do download
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const range = XLSX.utils.decode_range(sheet['!ref']);
-                const processedData = [];
-                const canceledData = [];
+                const processed = [];
+                const canceled = [];
 
                 for (let R = 1; R <= range.e.r; ++R) {
                     const get = (col) => sheet[`${col}${R + 1}`]?.v || '';
@@ -639,7 +647,7 @@
                     };
 
                     if (rowData.statusAtividade.toLowerCase().startsWith('cancelled')) {
-                        canceledData.push(rowData);
+                        canceled.push(rowData);
                         continue;
                     }
                     
@@ -661,25 +669,35 @@
                         codigoNomesMap.set(codigoExtraido, nomeCodigo);
                     }
 
-                    processedData.push({
+                    processed.push({
                         ...rowData,
                         codigo: codigoExtraido,
                         nomeCodigo: nomeCodigo,
                     });
                 }
+                return { processed, canceled };
+            };
 
-                dadosCanceladosGlobais = canceledData.map(d => ({ ...d, dateObj: parsePtBrDate(d.data) })).filter(d => d.dateObj);
-                processarEExibirDados(processedData);
+            try {
+                // Usa Promise.all para buscar todos os arquivos em paralelo
+                const results = await Promise.all(nomesArquivos.map(fetchAndProcessFile));
+
+                // Consolida os resultados de todos os arquivos
+                const allProcessed = results.map(r => r.processed).flat();
+                const allCanceled = results.map(r => r.canceled).flat();
+                
+                dadosCanceladosGlobais = allCanceled.map(d => ({ ...d, dateObj: parsePtBrDate(d.data) })).filter(d => d.dateObj);
+                processarEExibirDados(allProcessed);
 
             } catch (error) {
-                console.error('Erro ao carregar ou processar o arquivo da URL:', error);
+                console.error('Erro ao carregar ou processar os arquivos da URL:', error);
                 folderStatusDiv.textContent = 'Falha ao carregar dados.';
-                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique se o arquivo "${nomeArquivoDeDados}" existe no Azure.`;
-                renderizarDashboard([], []); // Limpa o dashboard em caso de erro
+                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique se TODOS os arquivos da lista existem no Azure e se os nomes estão corretos.`;
+                renderizarDashboard([], []);
             }
         }
         // ####################################################################
-        // ### ALTERAÇÃO TERMINA AQUI: Fim da nova função de carregamento ###
+        // ### ALTERAÇÃO TERMINA AQUI ###
         // ####################################################################
 
         async function carregarDadosConfirmados() { try { const [fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Excel Files', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] }); const file = await fileHandle.getFile(); confirmadosStatusDiv.textContent = `Analisando...`; const parsedData = await parseConfirmadosExcel(file); confirmadosGlobais = parsedData; localStorage.setItem('confirmadosTelDados', JSON.stringify(confirmadosGlobais)); aplicarFiltrosEAtualizar(); confirmadosStatusDiv.textContent = `${confirmadosGlobais.length} agendamentos Tel carregados.`; } catch (error) { if (error.name !== 'AbortError') console.error('Erro:', error); } }
@@ -695,8 +713,6 @@
             }
             return rawEmpresa;
         }
-
-        // ALTERAÇÃO: A função parseExcelFile não é mais necessária pois sua lógica foi movida para carregarDadosDaURL
         
         function parseConfirmadosExcel(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { try { const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' }); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }); const headers = jsonData[0]; const [colContrato, colCidade, colGrupo] = ['NR_CONTRATO', 'CIDADE', 'Grupo'].map(h => headers.indexOf(h)); if ([colContrato, colCidade, colGrupo].includes(-1)) { alert('Arquivo de Agenda Tel inválido. Colunas "NR_CONTRATO", "CIDADE", ou "Grupo" não encontradas.'); resolve([]); return; } resolve(jsonData.slice(1) .filter(row => row[colGrupo] === 'Grupo SP Interior' && String(row[colContrato] || '').trim()) .map(row => ({ contrato: String(row[colContrato]).trim().toUpperCase(), cidade: String(row[colCidade] || '').trim().toUpperCase() })) ); } catch (err) { reject(err); } }; reader.onerror = reject; reader.readAsArrayBuffer(file); }); }
         function parseDx22Excel(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { try { const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' }); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" }); const contractMap = new Map(); jsonData.forEach(row => { const rawContract = row['CONTRATO'] ? String(row['CONTRATO']).trim().toUpperCase() : null; if (rawContract) { const contract = rawContract.split('/').pop(); const city = row['CIDADE DE RETIRADA'] ? String(row['CIDADE DE RETIRADA']).trim().toUpperCase() : ''; if (!contractMap.has(contract)) { contractMap.set(contract, { contrato: contract, cidade: city }); } } }); resolve(Array.from(contractMap.values())); } catch (err) { reject(err); } }; reader.onerror = reject; reader.readAsArrayBuffer(file); }); }
@@ -705,7 +721,7 @@
         async function exportarComAnalitico(sheetName, columns, summaryDataRows, totalsRow, analyticalData, fileName) { if (summaryDataRows.length === 0 && analyticalData.length === 0) { alert('Não há dados para exportar.'); return; } const workbook = new ExcelJS.Workbook(); const summarySheet = workbook.addWorksheet(sheetName.substring(0, 30)); summarySheet.columns = columns; summarySheet.addRows(summaryDataRows); if (totalsRow) { summarySheet.addRow([]); const totalRowAdded = summarySheet.addRow(totalsRow); totalRowAdded.font = { bold: true }; } summarySheet.getRow(1).font = { bold: true }; summarySheet.autoFilter = { from: 'A1', to: { row: 1, column: columns.length } }; if (analyticalData.length > 0) { const analiticoSheet = workbook.addWorksheet('Analítico'); analiticoSheet.columns = [ { header: 'Técnico', key: 'tecnico', width: 35 }, { header: 'Login', key: 'login', width: 20 }, { header: 'Data', key: 'data', width: 15 }, { header: 'Status Atividade', key: 'statusAtividade', width: 20 }, { header: 'Cidade', key: 'cidade', width: 30 }, { header: 'Horário', key: 'horario', width: 15 }, { header: 'Contrato', key: 'contrato', width: 20 }, { header: 'Classe', key: 'classe', width: 25 }, { header: 'Código Baixa', key: 'codigo', width: 15 }, { header: 'Descrição Código', key: 'nomeCodigo', width: 45 }, { header: 'Status Código', key: 'statusCodigo', width: 20}, { header: 'Empresa', key: 'empresa', width: 35 }, { header: 'Tipo O.S.', key: 'tipo_os', width: 40 }, ]; analiticoSheet.addRows(analyticalData.map(d => ({...d, statusCodigo: getVisitStatus(d.codigo), nomeCodigo: d.nomeCodigo || codigoNomesMap.get(d.codigo) || ''}))); analiticoSheet.getRow(1).font = { bold: true }; analiticoSheet.autoFilter = 'A1:M1'; } try { const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: "application/octet-stream" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = fileName; link.click(); URL.revokeObjectURL(link.href); } catch (error) { console.error("Erro ao exportar para Excel:", error); document.getElementById('erro').innerText = `Falha ao exportar o arquivo.`; } }
         async function exportarCapacidadeCidades() { const btn = document.getElementById('btnExportarCapacidade'); if (dadosExibidosAtualmente.length === 0) { alert('Não há dados para exportar.'); return; } btn.disabled = true; btn.innerHTML = '&#x1F504; Exportando...'; try { const workbook = new ExcelJS.Workbook(); const capacitySheet = workbook.addWorksheet('Relatório de Capacidade'); const allCities = Object.values(resumoCidadesGlobal); const cidadesAbaixo = allCities.filter(c => c.capacidade > 0 && c.total < c.capacidade).map(c => ({ ...c, diferenca: c.total - c.capacidade })).sort((a, b) => a.diferenca - b.diferenca); const cidadesAcima = allCities.filter(c => c.capacidade > 0 && c.total > c.capacidade).map(c => ({ ...c, diferenca: c.total - c.capacidade })).sort((a, b) => b.diferenca - a.diferenca); const mainHeaderFont = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 }; const columnHeaderStyle = { font: { bold: true, color: { argb: 'FF000000' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBFBFBF' } }, alignment: { horizontal: 'center', vertical: 'middle' }, border: { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } } }; const boldFont = { bold: true }; const cellBorder = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; const centerAlign = { vertical: 'middle', horizontal: 'center' }; const leftAlign = { vertical: 'middle', horizontal: 'left' }; const fills = { yellow: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } }, purple: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } }, blue: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDAEEF3' } }, green: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } }, lightRed: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } } }; capacitySheet.mergeCells('A1:H1'); capacitySheet.getCell('A1').value = 'CIDADES ABAIXO DA CAPACIDADE'; capacitySheet.getCell('A1').style = { font: mainHeaderFont, alignment: centerAlign, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } } }; capacitySheet.getRow(2).values = ['Cidade', 'Total Agendado', 'Capacidade', 'Agenda Tel', 'Agenda Quente', 'Agenda Fria', 'Box', 'Abaixo']; cidadesAbaixo.forEach((c, index) => { const row = capacitySheet.getRow(index + 3); row.values = [c.cidade, c.total, c.capacidade, c.agendaTel, c.agendaQuente, c.agendaFria, c.box, c.diferenca]; row.getCell(1).font = boldFont; row.getCell(1).fill = fills.yellow; row.getCell(1).alignment = leftAlign; row.getCell(2).fill = fills.yellow; row.getCell(3).font = boldFont; row.getCell(3).fill = fills.yellow; row.getCell(4).fill = fills.purple; row.getCell(5).fill = fills.yellow; row.getCell(6).fill = fills.blue; row.getCell(7).fill = fills.green; row.getCell(8).font = boldFont; row.getCell(8).fill = fills.yellow; }); capacitySheet.mergeCells('J1:Q1'); capacitySheet.getCell('J1').value = 'CIDADES ACIMA DA CAPACIDADE'; capacitySheet.getCell('J1').style = { font: mainHeaderFont, alignment: centerAlign, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } } }; const headersAcima = ['Cidade', 'Total Agendado', 'Capacidade', 'Agenda Tel', 'Agenda Quente', 'Agenda Fria', 'Box', 'Acima']; headersAcima.forEach((h, i) => capacitySheet.getCell(2, i + 10).value = h); cidadesAcima.forEach((c, index) => { const row = capacitySheet.getRow(index + 3); row.getCell(10).value = c.cidade; row.getCell(10).font = boldFont; row.getCell(10).fill = fills.yellow; row.getCell(11).value = c.total; row.getCell(11).fill = fills.yellow; row.getCell(12).value = c.capacidade; row.getCell(12).font = boldFont; row.getCell(12).fill = fills.yellow; row.getCell(13).value = c.agendaTel; row.getCell(13).fill = fills.purple; row.getCell(14).value = c.agendaQuente; row.getCell(14).fill = fills.yellow; row.getCell(15).value = c.agendaFria; row.getCell(15).fill = fills.blue; row.getCell(16).value = c.box; row.getCell(16).fill = fills.green; row.getCell(17).value = c.diferenca; row.getCell(17).font = boldFont; row.getCell(17).fill = fills.lightRed; }); capacitySheet.eachRow((row, rowNumber) => { row.eachCell({ includeEmpty: true }, (cell, colNumber) => { if (rowNumber === 2) { cell.style = columnHeaderStyle; } else if (rowNumber > 2) { cell.border = cellBorder; if (colNumber !== 1 && colNumber !== 10) { cell.alignment = centerAlign; } } }); }); capacitySheet.columns = [ { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 10 }, { width: 10 }, { width: 3 }, { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 10 }, { width: 10 }]; const analiticoSheet = workbook.addWorksheet('Analítico'); const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); analiticoSheet.columns = [ { header: 'Técnico', key: 'tecnico', width: 35 }, { header: 'Login', key: 'login', width: 20 }, { header: 'Data', key: 'data', width: 15 }, { header: 'Status Atividade', key: 'statusAtividade', width: 20 }, { header: 'Cidade', key: 'cidade', width: 30 }, { header: 'Horário', key: 'horario', width: 15 }, { header: 'Contrato', key: 'contrato', width: 20 }, { header: 'Classe', key: 'classe', width: 25 }, { header: 'Código Baixa', key: 'codigo', width: 15 }, { header: 'Descrição Código', key: 'nomeCodigo', width: 45 }, { header: 'Status Código', key: 'statusCodigo', width: 20}, { header: 'Empresa', key: 'empresa', width: 35 }, { header: 'Tipo O.S.', key: 'tipo_os', width: 40 }, { header: 'Agenda Tel', key: 'agendaTel', width: 15 }]; analiticoSheet.addRows(dadosExibidosAtualmente.map(d => ({ ...d, agendaTel: confirmadosContratosSet.has(d.contrato) ? 'Sim' : 'Não', statusCodigo: getVisitStatus(d.codigo), nomeCodigo: d.nomeCodigo || codigoNomesMap.get(d.codigo) || '' }))); analiticoSheet.getRow(1).font = { bold: true }; analiticoSheet.autoFilter = 'A1:N1'; const buffer = await workbook.xlsx.writeBuffer(); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([buffer], { type: "application/octet-stream" })); link.download = `Relatorio_Produtividade_Geral_${new Date().toISOString().slice(0,10)}.xlsx`; link.click(); } catch (error) { console.error("Erro ao exportar:", error); document.getElementById('erro').innerText = 'Falha ao exportar relatório.'; } finally { btn.disabled = false; btn.innerHTML = '&#x1F4E5; Exportar Capacidade'; } }
         async function exportarContratosPorTipoServico(tipoServico) { if (dadosExibidosAtualmente.length === 0) { alert('Não há dados para exportar.'); return; } const contratosFiltrados = dadosExibidosAtualmente.filter(d => (d.tipo_os || '').trim() === tipoServico ); if (contratosFiltrados.length === 0) { alert(`Nenhum contrato encontrado para o tipo de serviço "${tipoServico}" na data selecionada.`); return; } const workbook = new ExcelJS.Workbook(); const sheet = workbook.addWorksheet(`Contratos - ${tipoServico.substring(0, 25).trim()}`); sheet.columns = [ { header: 'Contrato', key: 'contrato', width: 20 }, { header: 'Cidade', key: 'cidade', width: 30 }, { header: 'Horário', key: 'horario', width: 15 }, { header: 'Classe', key: 'classe', width: 15 }, { header: 'Empresa (Recurso Pai)', key: 'empresa', width: 35 }, { header: 'Tipo O.S', key: 'tipo_os', width: 30 }, { header: 'Status Atividade', key: 'statusAtividade', width: 20 }, { header: 'Código de Baixa', key: 'codigo', width: 18 }, { header: 'Descrição Código', key: 'nomeCodigo', width: 45 }, { header: 'Status Código', key: 'statusCodigo', width: 20 } ]; contratosFiltrados.forEach(d => { sheet.addRow({ contrato: d.contrato, cidade: d.cidade, horario: d.horario, classe: d.classe, empresa: d.empresa, tipo_os: d.tipo_os, statusAtividade: d.statusAtividade, codigo: d.codigo, nomeCodigo: d.nomeCodigo || codigoNomesMap.get(d.codigo) || '', statusCodigo: getVisitStatus(d.codigo) }); }); sheet.getRow(1).font = { bold: true }; sheet.autoFilter = 'A1:J1'; try { const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: "application/octet-stream" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Contratos_${tipoServico.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`; link.click(); URL.revokeObjectURL(link.href); } catch (error) { console.error("Erro ao exportar contratos por tipo de serviço:", error); document.getElementById('erro').innerText = `Falha ao exportar contratos para ${tipoServico}.`; } }
-        function processServiceDataForExport(data) { const resumoServicos = data.reduce((acc, d) => { const tipoServico = (d.tipo_os || '').trim() || 'Serviço Não Especificado'; if (!acc[tipoServico]) acc[tipoServico] = { tipoServico, produtivas: 0, improdutivas: 0, pendentes: 0, naoClassificados: 0, total: 0 }; const s = acc[tipoServico]; s.total++; const status = getVisitStatus(d.codigo); if (status === 'produtiva') s.produtivas++; else if (status === 'improdutiva') s.improdutivas++; else if (status === 'pendente') s.pendentes++; else s.naoClassificados++; return acc; }, {}); const dataRows = Object.values(resumoServicos).sort((a, b) => a.tipoServico.localeCompare(b.tipoServico)).map(s => ({ tipoServico: s.tipoServico, improdutivas: s.improdutivas, produtivas: s.produtivas, pendentes: s.pendentes, naoClassificados: s.naoClassificados, total: s.total, prodPercent: s.total > 0 ? parseFloat(((s.produtivas / s.total) * 100).toFixed(2)) : 0 })); const totalImprodutivas = dataRows.reduce((sum, s) => sum + s.improdutivas, 0); const totalProdutivas = dataRows.reduce((sum, s) => sum + s.produtivas, 0); const totalPendentes = dataRows.reduce((sum, s) => sum + s.pendentes, 0); const totalNaoClassificados = dataRows.reduce((sum, s) => sum + s.naoClassificados, 0); const totalGeral = dataRows.reduce((sum, s) => sum + s.total, 0); const totalsRow = { tipoServico: 'Total Geral', improdutivas: totalImprodutivas, produtivas: totalProdutivas, pendentes: totalPendentes, naoClassificados: totalNaoClassificados, total: totalGeral, prodPercent: totalGeral > 0 ? parseFloat(((totalProdUTivas / totalGeral) * 100).toFixed(2)) : 0 }; return { dataRows, totalsRow }; }
+        function processServiceDataForExport(data) { const resumoServicos = data.reduce((acc, d) => { const tipoServico = (d.tipo_os || '').trim() || 'Serviço Não Especificado'; if (!acc[tipoServico]) acc[tipoServico] = { tipoServico, produtivas: 0, improdutivas: 0, pendentes: 0, naoClassificados: 0, total: 0 }; const s = acc[tipoServico]; s.total++; const status = getVisitStatus(d.codigo); if (status === 'produtiva') s.produtivas++; else if (status === 'improdutiva') s.improdutivas++; else if (status === 'pendente') s.pendentes++; else s.naoClassificados++; return acc; }, {}); const dataRows = Object.values(resumoServicos).sort((a, b) => a.tipoServico.localeCompare(b.tipoServico)).map(s => ({ tipoServico: s.tipoServico, improdutivas: s.improdutivas, produtivas: s.produtivas, pendentes: s.pendentes, naoClassificados: s.naoClassificados, total: s.total, prodPercent: s.total > 0 ? parseFloat(((s.produtivas / s.total) * 100).toFixed(2)) : 0 })); const totalImprodutivas = dataRows.reduce((sum, s) => sum + s.improdutivas, 0); const totalProdutivas = dataRows.reduce((sum, s) => sum + s.produtivas, 0); const totalPendentes = dataRows.reduce((sum, s) => sum + s.pendentes, 0); const totalNaoClassificados = dataRows.reduce((sum, s) => sum + s.naoClassificados, 0); const totalGeral = dataRows.reduce((sum, s) => sum + s.total, 0); const totalsRow = { tipoServico: 'Total Geral', improdutivas: totalImprodutivas, produtivas: totalProdutivas, pendentes: totalPendentes, naoClassificados: totalNaoClassificados, total: totalGeral, prodPercent: totalGeral > 0 ? parseFloat(((totalProdutivas / totalGeral) * 100).toFixed(2)) : 0 }; return { dataRows, totalsRow }; }
         function handleExportPainelServico(panelId) { const panelConfig = paineisServicoConfig.find(p => p.id === panelId); if (!panelConfig) return; const selectedServicesSet = new Set(panelConfig.selectedServices); const dadosFiltrados = dadosExibidosAtualmente.filter(d => { const tipoServico = (d.tipo_os || '').trim(); if (tipoServico === '') return false; if (panelConfig.mode === 'include') return selectedServicesSet.has(tipoServico); else return !selectedServicesSet.has(tipoServico); }); const { dataRows, totalsRow } = processServiceDataForExport(dadosFiltrados); const fileName = `Painel_${panelConfig.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`; const columns = [ { header: 'Tipo de Serviço', key: 'tipoServico', width: 40 }, { header: 'Improdutivas', key: 'improdutivas', width: 15 }, { header: 'Produtivas', key: 'produtivas', width: 15 }, { header: 'Pendentes', key: 'pendentes', width: 15 }, { header: 'Não Classificados', key: 'naoClassificados', width: 18}, { header: 'Total', key: 'total', width: 15 }, { header: 'Produtividade (%)', key: 'prodPercent', width: 20, style: { numFmt: '0.00"%"' } } ]; exportarComAnalitico(panelConfig.title, columns, dataRows, totalsRow, dadosFiltrados, fileName); }
         function exportarAgendaTel() { if (confirmadosGlobais.length === 0) { alert('Carregue o arquivo "Agenda Tel" primeiro.'); return; } const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); const dadosAgendaTel = dadosExibidosAtualmente.filter(d => confirmadosContratosSet.has(d.contrato)); const { dataRows, totalsRow } = processServiceDataForExport(dadosAgendaTel); const fileName = `Analise_Agenda_Tel_${new Date().toISOString().slice(0,10)}.xlsx`; const columns = [ { header: 'Tipo de Serviço', key: 'tipoServico', width: 40 }, { header: 'Improdutivas', key: 'improdutivas', width: 15 }, { header: 'Produtivas', key: 'produtivas', width: 15 }, { header: 'Pendentes', key: 'pendentes', width: 15 }, { header: 'Não Classificados', key: 'naoClassificados', width: 18}, { header: 'Total', key: 'total', width: 15 }, { header: 'Produtividade (%)', key: 'prodPercent', width: 20, style: { numFmt: '0.00"%"' } } ]; exportarComAnalitico('Agenda Tel', columns, dataRows, totalsRow, dadosAgendaTel, fileName); }
         function exportarDesempenhoTecnicos() { const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); const resumoTecnicos = dadosExibidosAtualmente.reduce((acc, d) => { const tecnico = d.tecnico || '(Sem Técnico)'; if (!acc[tecnico]) acc[tecnico] = { tecnico: tecnico, login: d.login, empresa: d.empresa, produtivas: 0, improdutivas: 0, pendentes: 0, naoClassificados: 0, agendaQuente: 0, agendaFria: 0, box: 0, chip: 0, agendaTel: 0, total: 0 }; const t = acc[tecnico]; t.total++; const status = getVisitStatus(d.codigo); if (status === 'produtiva') t.produtivas++; else if (status === 'improdutiva') t.improdutivas++; else if (status === 'pendente') t.pendentes++; else t.naoClassificados++; if (d.horario === '08 - 12' || d.horario === '12 - 18') t.agendaQuente++; else if (d.horario === '08 - 22') t.agendaFria++; if (d.classe === 'Classe 14') t.box++; if (confirmadosContratosSet.has(d.contrato)) t.agendaTel++; return acc; }, {}); const dataRows = Object.values(resumoTecnicos).sort((a, b) => b.produtivas - a.produtivas); const fileName = `Desempenho_Tecnicos_${new Date().toISOString().slice(0,10)}.xlsx`; const columns = [ { header: 'Login', key: 'login', width: 20 }, { header: 'Técnico', key: 'tecnico', width: 35 }, { header: 'Empresa', key: 'empresa', width: 25 }, { header: 'Produtivas', key: 'produtivas', width: 15 }, { header: 'Improdutivas', key: 'improdutivas', width: 15 }, { header: 'Pendentes', key: 'pendentes', width: 15 }, { header: 'Não Classificados', key: 'naoClassificados', width: 18 }, { header: 'Agenda Quente', key: 'agendaQuente', width: 18 }, { header: 'Agenda Fria', key: 'agendaFria', width: 15 }, { header: 'Box', key: 'box', width: 10 }, { header: 'Chip', key: 'chip', width: 10 }, { header: 'Agenda Tel', key: 'agendaTel', width: 15 }, { header: 'Total', key: 'total', width: 15 } ]; exportarComAnalitico('Desempenho por Técnico', columns, dataRows, null, dadosExibidosAtualmente, fileName); }
@@ -986,10 +1002,9 @@
         }
 
         // --- Configuração Inicial ---
-        async function initializeDashboard() { // ALTERADO para async
+        async function initializeDashboard() {
             loadDddMapping(); renderDddFilter(); loadConfiguredCodes(); carregarConfiguracaoPaineis(); loadIgnoredCanceledServices();
             
-            // A carga de dados de apoio via LocalStorage permanece, pois são opcionais
             if (localStorage.getItem('confirmadosTelDados')) { confirmadosGlobais = JSON.parse(localStorage.getItem('confirmadosTelDados')); confirmadosStatusDiv.textContent = `${confirmadosGlobais.length} agendamentos Tel carregados.`; }
             if (localStorage.getItem('dx22Dados')) { dx22Globais = JSON.parse(localStorage.getItem('dx22Dados')); dx22StatusDiv.textContent = `${dx22Globais.length} contratos DX22 carregados.`; }
             
@@ -997,11 +1012,7 @@
             toggleVisitasCidade.checked = isVisitasCidadeVisible;
             visitasCidadeContainer.style.display = isVisitasCidadeVisible ? 'block' : 'none';
 
-            // ######################################################################
-            // ### ALTERAÇÃO: Chama a nova função de carregamento automático ###
-            // ######################################################################
             await carregarDadosDaURL();
-            // ######################################################################
 
             // Event Listeners Estáticos
             dateFilter.addEventListener('change', aplicarFiltrosEAtualizar);
@@ -1033,7 +1044,6 @@
             document.querySelectorAll('.filter-btn-codigos').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.filter-btn-codigos').forEach(b => b.classList.remove('active')); btn.classList.add('active'); const filter = btn.dataset.filter; const improdutivosWrapper = document.getElementById('improdutivos-wrapper'); const produtivosWrapper = document.getElementById('produtivos-wrapper'); const naoClassificadosWrapper = document.getElementById('nao-classificados-wrapper'); improdutivosWrapper.style.display = (filter === 'todos' || filter === 'improdutivos') ? 'block' : 'none'; produtivosWrapper.style.display = (filter === 'todos' || filter === 'produtivos') ? 'block' : 'none'; naoClassificadosWrapper.style.display = (filter === 'todos' || filter === 'nao-classificados') ? 'block' : 'none'; }); });
             document.getElementById('serviceSearchInput').addEventListener('input', (e) => { const searchTerm = e.target.value.toLowerCase(); document.querySelectorAll('#service-list-container label').forEach(label => { const serviceName = label.innerText.toLowerCase(); label.style.display = serviceName.includes(searchTerm) ? 'block' : 'none'; }); });
         
-            // ALTERAÇÃO: Os botões de carregar dados de apoio (Agenda Tel, DX22) continuam funcionando como antes
             if ('showOpenFilePicker' in window) {
                 carregarConfirmadosBtn.addEventListener('click', carregarDadosConfirmados);
                 carregarDx22Btn.addEventListener('click', carregarDx22);
