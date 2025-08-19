@@ -1,367 +1,1075 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Dashboard para análise de produtividade de visitas técnicas.">
+    <meta name="description" content="Dashboard para análise de produtividade de visitas técnicas, com foco em capacidade e desempenho por cidade e técnico.">
     <title>Dashboard de Produtividade</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <style>
         :root {
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            --transition-speed: 0.3s;
-            --border-radius: 8px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --cor-primaria: #4a90e2; --cor-primaria-hover: #357ABD; --cor-sucesso: #50e3c2;
+            --cor-perigo: #e35050; --cor-perigo-hover: #c53030; --cor-alerta: #f5a623;
+            --cor-nao-classificado: #8c9fb9; --fundo-pagina: #1a202c;
+            --fundo-card: #2d3748; --fundo-tabela-header: #4a5568; --cor-texto-principal: #e2e8f0;
+            --cor-texto-secundario: #a0aec0; --cor-borda: #4a5568; --fundo-produtiva-row: rgba(80, 227, 194, 0.15);
+            --fundo-improdutiva-row: rgba(227, 80, 80, 0.15); --fundo-pendente-row: rgba(245, 166, 35, 0.15);
+            --fundo-nao-classificado-row: rgba(140, 159, 185, 0.15);
         }
-
-        [data-theme="dark"] {
-            --bg-primary: #121212;
-            --bg-secondary: #1E1E1E;
-            --bg-tertiary: #2a2a2a;
-            --text-primary: #E0E0E0;
-            --text-secondary: #a0aec0;
-            --border-color: #3a3a3a;
-            --accent-primary: #4a90e2;
-            --accent-primary-hover: #5aa1f2;
-            --accent-danger: #e53e3e;
-            --accent-danger-hover: #f56565;
-            --accent-success: #38a169;
-            --accent-warning: #dd6b20;
-            --accent-info: #3182ce;
-            --success-glow: rgba(56, 161, 105, 0.2);
-            --danger-glow: rgba(229, 62, 62, 0.2);
-            --warning-glow: rgba(221, 107, 32, 0.2);
-            --info-glow: rgba(49, 130, 206, 0.2);
-        }
-
         [data-theme="light"] {
-            --bg-primary: #f7fafc;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #edf2f7;
-            --text-primary: #1a202c;
-            --text-secondary: #718096;
-            --border-color: #e2e8f0;
-            --accent-primary: #3182ce;
-            --accent-primary-hover: #2b6cb0;
-            --accent-danger: #c53030;
-            --accent-danger-hover: #9b2c2c;
-            --accent-success: #2f855a;
-            --accent-warning: #c05621;
-            --accent-info: #2c5282;
-            --success-glow: rgba(47, 133, 90, 0.15);
-            --danger-glow: rgba(197, 48, 48, 0.15);
-            --warning-glow: rgba(192, 86, 33, 0.15);
-            --info-glow: rgba(44, 82, 130, 0.15);
+            --cor-primaria: #4299e1; --cor-primaria-hover: #2b6cb0; --cor-sucesso: #48bb78;
+            --cor-perigo: #f56565; --cor-perigo-hover: #c53030; --cor-alerta: #ed8936;
+            --cor-nao-classificado: #718096; --fundo-pagina: #f7fafc;
+            --fundo-card: #ffffff; --fundo-tabela-header: #edf2f7; --cor-texto-principal: #1a202c;
+            --cor-texto-secundario: #718096; --cor-borda: #e2e8f0; --fundo-produtiva-row: rgba(72, 187, 120, 0.15);
+            --fundo-improdutiva-row: rgba(245, 101, 101, 0.15); --fundo-pendente-row: rgba(237, 137, 54, 0.15);
+            --fundo-nao-classificado-row: rgba(113, 128, 150, 0.15);
         }
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         body {
-            font-family: var(--font-family);
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            transition: background-color var(--transition-speed), color var(--transition-speed);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--fundo-pagina); color: var(--cor-texto-principal);
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* --- Estrutura Principal --- */
         .hidden { display: none !important; }
 
-        #app-container {
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .main-content {
-            flex-grow: 1;
-            padding: 2rem;
-            overflow-y: auto;
-        }
-        .main-content-grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        /* --- Componentes --- */
-        .widget {
-            background-color: var(--bg-secondary);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            padding: 1.5rem;
-            transition: all var(--transition-speed);
-        }
-
-        .widget-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .widget-header h2 { font-size: 1.25rem; font-weight: 600; }
-        .widget-controls { display: flex; gap: 0.5rem; }
-
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition-speed);
-        }
-        .btn:hover { background-color: var(--border-color); }
-        .btn-primary { background-color: var(--accent-primary); color: white; border-color: var(--accent-primary); }
-        .btn-primary:hover { background-color: var(--accent-primary-hover); border-color: var(--accent-primary-hover); }
-        .btn-danger { background-color: var(--accent-danger); color: white; border-color: var(--accent-danger); }
-        .btn-danger:hover { background-color: var(--accent-danger-hover); border-color: var(--accent-danger-hover); }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        th {
-            font-weight: 600;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-            cursor: pointer;
-        }
-        th:hover .sort-icon { opacity: 1; }
-        .sort-icon {
-            opacity: 0.3;
-            margin-left: 0.25rem;
-            transition: opacity var(--transition-speed);
-        }
-        tbody tr:hover { background-color: var(--bg-tertiary); }
-        tfoot tr {
-          background-color: var(--bg-tertiary);
-          font-weight: bold;
-        }
-
-        /* --- Tela de Login --- */
+        /* Estilos da Página de Login */
         #login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100vw;
-            height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            width: 100vw; height: 100vh;
         }
         .login-box {
-            background-color: var(--bg-secondary);
-            padding: 2.5rem;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            width: 100%;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            border: 1px solid var(--border-color);
+            background-color: var(--fundo-card); padding: 40px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px;
+            display: flex; flex-direction: column; gap: 20px;
         }
-        .login-box h1 {
-            color: var(--text-primary);
-            text-align: center;
-            margin-bottom: 0;
-            font-size: 1.75rem;
-        }
+        .login-box h1 { color: var(--cor-primaria); text-align: center; margin-bottom: 10px; }
         .login-box input {
-            width: 100%;
-            padding: 0.75rem;
-            font-size: 1rem;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
+            width: 100%; padding: 12px; font-size: 1em; background-color: var(--fundo-pagina);
+            color: var(--cor-texto-principal); border: 1px solid var(--cor-borda);
             border-radius: 6px;
         }
         .login-box button {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: var(--accent-primary);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-weight: bold;
+            width: 100%; padding: 12px; background-color: var(--cor-primaria);
+            color: white; border: none; border-radius: 6px; font-size: 1.1em;
+            cursor: pointer; transition: background-color 0.2s; font-weight: bold;
         }
-        .login-box button:hover { background-color: var(--accent-primary-hover); }
+        .login-box button:hover { background-color: var(--cor-primaria-hover); }
+        #loginError { color: var(--cor-perigo); text-align: center; font-size: 0.9em; min-height: 20px; }
 
-        /* --- Sidebar --- */
+        /* Estrutura do Dashboard */
+        #dashboard-container { display: flex; width: 100%; }
         .sidebar {
-            width: 280px;
-            background-color: var(--bg-secondary);
-            padding: 1.5rem;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid var(--border-color);
-            overflow-y: auto;
-            flex-shrink: 0;
+            width: 280px; background-color: var(--fundo-card); padding: 25px; height: 100vh;
+            position: fixed; display: flex; flex-direction: column; border-right: 1px solid var(--cor-borda); overflow-y: auto;
         }
-        .sidebar-header { margin-bottom: 1.5rem; }
-        .sidebar-header h1 { font-size: 1.5rem; color: var(--text-primary); }
-        .controls-section { margin-bottom: 1.5rem; }
-        .controls-section label {
-            display: block;
-            font-size: 0.8rem;
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-        .sidebar input[type="date"], .sidebar select {
-            width: 100%;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 0.5rem;
-        }
-        .sidebar button { width: 100%; margin-bottom: 0.5rem; }
-        #ddd-filter-container { display: flex; flex-direction: column; gap: 0.5rem; }
-        #ddd-filter-container label { font-size: 0.9rem; display: flex; align-items: center; cursor: pointer; color: var(--text-primary); }
-        #ddd-filter-container input { margin-right: 0.5rem; }
+        .main-content { margin-left: 280px; width: calc(100% - 280px); padding: 25px; }
+        .widget { background-color: var(--fundo-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 25px; }
 
-        .user-info { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); }
-        #user-email { font-size: 0.85rem; color: var(--text-secondary); word-break: break-all; }
-        #logoutBtn { margin-top: 0.75rem; }
+        .sidebar h1 { font-size: 1.6em; margin-bottom: 25px; color: var(--cor-primaria); }
+        .sidebar .controls-section { margin-bottom: 25px; }
+        .sidebar label { display: block; font-size: 0.9em; margin-bottom: 8px; color: var(--cor-texto-secundario); font-weight: 500; }
+        .sidebar input[type="date"] {
+            width: 100%; margin-bottom: 15px; font-size: 0.9em; background-color: var(--fundo-pagina);
+            color: var(--cor-texto-principal); border: 1px solid var(--cor-borda); border-radius: 6px; padding: 10px;
+        }
+        .sidebar button {
+            width: 100%; padding: 12px; margin-bottom: 10px; background-color: var(--cor-primaria);
+            color: white; border: none; border-radius: 6px; font-size: 0.95em; cursor: pointer;
+            transition: background-color 0.2s ease-in-out; font-weight: bold;
+        }
+        .sidebar button:hover { background-color: var(--cor-primaria-hover); }
+        .sidebar button:disabled { background-color: #4a5568; cursor: not-allowed; }
+        #carregarConfirmadosBtn, #carregarDx22Btn { background-color: var(--cor-alerta); color: #1a202c; }
+        #carregarConfirmadosBtn:hover, #carregarDx22Btn:hover { background-color: #dd901f; }
+        #folderStatus, #status, #erro, #confirmadosStatus, #dx22Status { font-size: 0.85em; margin-top: 15px; line-height: 1.4; }
+        #status, #confirmadosStatus, #dx22Status { color: var(--cor-sucesso); }
+        #erro { color: var(--cor-perigo); }
         
-        .status-area {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            line-height: 1.4;
-            padding: 0.5rem;
-            background-color: var(--bg-tertiary);
-            border-radius: 6px;
+        /* User Info & Logout */
+        .user-info { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--cor-borda); }
+        #user-email { font-size: 0.9em; color: var(--cor-texto-secundario); word-break: break-all; }
+        #logoutBtn {
+            background-color: var(--cor-perigo); font-size: 0.9em; margin-top: 10px;
+            padding: 8px 12px;
         }
+        #logoutBtn:hover { background-color: var(--cor-perigo-hover); }
 
-        /* --- Scorecards --- */
-        .scorecards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
-        }
-        .card {
-            background-color: var(--bg-secondary);
-            padding: 1rem;
-            border-radius: var(--border-radius);
-            border-left: 5px solid;
-        }
-        .card-title { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
-        .card-value { font-size: 2rem; font-weight: 700; line-height: 1; }
-        .card-sub-value { font-size: 0.8rem; color: var(--text-secondary); }
-        .card.produtivas { border-color: var(--accent-success); box-shadow: 0 0 15px var(--success-glow); }
-        .card.improdutivas { border-color: var(--accent-danger); box-shadow: 0 0 15px var(--danger-glow); }
-        .card.pendentes { border-color: var(--accent-warning); box-shadow: 0 0 15px var(--warning-glow); }
-        .card.nao-classificado { border-color: var(--text-secondary); }
-        .card.total { border-color: var(--accent-info); box-shadow: 0 0 15px var(--info-glow); }
+        .toggle-switch { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .toggle-switch label { margin-bottom: 0; color: var(--cor-texto-principal); }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4a5568; transition: .4s; border-radius: 28px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--cor-primaria); }
+        input:checked + .slider:before { transform: translateX(22px); }
 
-        /* --- Modal --- */
-        .modal-overlay {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);
-            justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background-color: var(--bg-secondary);
-            padding: 2rem; border-radius: var(--border-radius);
-            width: 90%; max-width: 600px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; gap: 1rem;
-        }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { margin: 0; }
-        .modal-header .close-btn { font-size: 1.5rem; cursor: pointer; background: none; border: none; color: var(--text-secondary); }
-        .modal-body { display: flex; flex-direction: column; gap: 1rem; }
-        .modal-body label { font-weight: 500; color: var(--text-secondary); }
-        .modal-body input, .modal-body .service-list-container {
-            width: 100%; padding: 0.5rem; font-size: 0.95rem;
-            background-color: var(--bg-primary); color: var(--text-primary);
-            border: 1px solid var(--border-color); border-radius: 6px;
-        }
-        .service-list-container { max-height: 250px; overflow-y: auto; }
-        .service-list-container label { display: block; padding: 0.25rem 0.5rem; border-radius: 4px; }
-        .service-list-container label:hover { background-color: var(--bg-tertiary); }
-        .modal-buttons { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+        #ddd-filter-container label { font-size: 0.95em; margin-bottom: 8px; display: flex; align-items: center; cursor: pointer; }
+        #ddd-filter-container input { margin-right: 8px; }
+        #manage-ddd-btn, #manage-ignored-btn { background-color: #6366f1; display: none; }
+        #manage-ddd-btn:hover, #manage-ignored-btn:hover { background-color: #4f46e5; }
+        body:not(.config-mode-inactive) #manage-ddd-btn,
+        body:not(.config-mode-inactive) #manage-ignored-btn { display: inline-block; }
         
-        /* --- Toast Notifications --- */
-        #toast-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .toast {
-            padding: 1rem;
-            border-radius: var(--border-radius);
-            color: white;
-            box-shadow: var(--shadow);
-            opacity: 0;
-            transform: translateX(100%);
-            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-        }
-        .toast.show { opacity: 1; transform: translateX(0); }
-        .toast.success { background-color: var(--accent-success); }
-        .toast.error { background-color: var(--accent-danger); }
-        .toast.info { background-color: var(--accent-info); }
+        .widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--cor-borda); padding-bottom: 15px; }
+        .widget-header h2, .widget-header h3 { margin: 0; color: var(--cor-texto-principal); }
+        .widget-header h3[contenteditable="true"]:focus { outline: 2px solid var(--cor-primaria); background-color: var(--fundo-pagina); border-radius: 4px; padding: 2px 5px;}
+        .widget-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 16px; border: 1px solid var(--cor-borda); background-color: transparent; color: var(--cor-texto-secundario); border-radius: 6px; cursor: pointer; transition: all 0.2s ease-in-out; font-weight: bold; }
+        .filter-btn:hover { background-color: var(--fundo-tabela-header); color: var(--cor-texto-principal); }
+        .filter-btn-codigos { padding: 6px 14px; border: 1px solid var(--cor-borda); background-color: transparent; color: var(--cor-texto-secundario); border-radius: 6px; cursor: pointer; transition: all 0.2s ease-in-out; font-weight: bold; font-size: 0.85em; }
+        .filter-btn-codigos:hover { background-color: var(--fundo-tabela-header); color: var(--cor-texto-principal); }
+        .filter-btn-codigos.active { background-color: var(--cor-primaria); color: white; border-color: var(--cor-primaria); }
 
-        /* --- Loading Spinner --- */
-        .loader-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); z-index: 9999;
-            display: flex; justify-content: center; align-items: center;
-        }
-        .loader {
-            border: 5px solid var(--bg-tertiary);
-            border-top: 5px solid var(--accent-primary);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .scorecards-gerais { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 20px; background: none; box-shadow: none; padding: 0; }
+        .card { background-color: var(--fundo-card); padding: 15px; border-radius: 12px; border-bottom: 4px solid; display: flex; flex-direction: column; }
+        .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .card-title { font-size: 0.95em; color: var(--cor-texto-secundario); font-weight: 500; }
+        .card-value span { display: block; font-size: 2.2em; font-weight: bold; line-height: 1.2; }
+        .card-value small { font-size: 0.75em; font-weight: 600; color: var(--cor-texto-secundario); display: block; margin-top: 4px; }
+        .card.produtivas { border-color: var(--cor-sucesso); }
+        .card.improdutivas { border-color: var(--cor-perigo); }
+        .card.agendadas { border-color: var(--cor-primaria); }
+        .card.pendentes { border-color: var(--cor-alerta); }
+        
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border-bottom: 1px solid var(--cor-borda); padding: 10px 12px; text-align: left; }
+        th { background-color: var(--fundo-tabela-header); font-weight: bold; border-bottom-width: 2px; }
+        tr:nth-child(even) { background-color: rgba(74, 85, 104, 0.2); }
+        td:not(:first-child), th:not(:first-child) { text-align: center; }
+        td:first-child, th:first-child { text-align: left; font-weight: 500; line-height: 1.4; }
+        #codigos-baixa-tables-wrapper td:first-child { line-height: 1.3; }
+        .ranking-total-row td { font-weight: bold; background-color: var(--fundo-tabela-header); border-top: 2px solid var(--cor-texto-secundario); }
+        tfoot .ranking-total-row td { line-height: 1.3; }
+        tfoot .ranking-total-row small { font-size: 0.8em; color: var(--cor-texto-secundario); font-weight: normal; }
+        .config-column { display: none; }
+        body:not(.config-mode-inactive) .config-column { display: table-cell; }
 
-        /* Utilitários */
-        .config-mode-inactive .config-column { display: none; }
+        .tecnico-zerado-row { background-color: rgba(227, 80, 80, 0.25) !important; font-style: italic; }
+        .tecnico-zerado-row td { color: var(--cor-texto-secundario); }
 
-        @media (max-width: 768px) {
-            #app-container {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-            }
-            .main-content {
-                padding: 1rem;
-            }
+        #visitas-cidade-table input[type="number"] { width: 80px; padding: 6px; background-color: var(--fundo-pagina); color: var(--cor-texto-principal); border: 1px solid var(--cor-borda); border-radius: 4px; text-align: center; }
+        .col-produtiva { background-color: rgba(80, 227, 194, 0.1); }
+        .col-improdutiva { background-color: rgba(227, 80, 80, 0.1); }
+        .col-pendente { background-color: rgba(245, 166, 35, 0.1); }
+        .col-nao-classificado { background-color: var(--fundo-nao-classificado-row); }
+        .col-box { background-color: rgba(74, 144, 226, 0.15); }
+        .col-chip { background-color: rgba(139, 92, 246, 0.15); }
+        .col-agenda-tel { background-color: rgba(20, 184, 166, 0.2); }
+        
+        th.col-improdutiva-header { background-color: #E35050; color: white; }
+        th.col-produtiva-header { background-color: #50E3C2; color: white; }
+        th.col-pendente-header { background-color: #F5A623; color: white; }
+        th.col-nao-classificado-header { background-color: var(--cor-nao-classificado); color: white; }
+
+        .lupa-icon { cursor: pointer; margin-left: 8px; font-size: 0.9em; color: var(--cor-primaria); transition: color 0.2s ease-in-out; }
+        .lupa-icon:hover { color: var(--cor-primaria-hover); }
+
+        .multi-tables-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        #improdutivos-wrapper, #produtivos-wrapper, #nao-classificados-wrapper { min-width: 0; } 
+        #codigos-baixa-container h3 { font-size: 1.1em; color: var(--cor-texto-secundario); margin-bottom: 10px; border-bottom: 1px solid var(--cor-borda); padding-bottom: 8px; }
+        .config-column-codigos { display: none; }
+        body:not(.config-mode-inactive) .config-column-codigos { display: table-cell; }
+        .config-column-codigos .radio-group { display: flex; gap: 10px; justify-content: center; }
+        .config-column-codigos label { font-size: 0.85em; cursor: pointer; }
+
+        /* Estilos dos Modais */
+        .modal-overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
+        .modal-content { background-color: var(--fundo-card); margin: auto; padding: 25px; border: 1px solid var(--cor-borda); width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 15px; }
+        .modal-content h3 { color: var(--cor-primaria); margin-top: 0; }
+        .modal-content label { font-weight: 500; color: var(--cor-texto-secundario); }
+        .modal-content input { width: 100%; padding: 10px; background-color: var(--fundo-pagina); color: var(--cor-texto-principal); border: 1px solid var(--cor-borda); border-radius: 6px; font-size: 0.95em; }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        #cancelPanelConfigBtn, #cancelDddConfigBtn, #cancelIgnoredServicesBtn { background-color: var(--fundo-tabela-header); color: var(--cor-texto-principal); }
+        .service-list-container { max-height: 250px; overflow-y: auto; border: 1px solid var(--cor-borda); padding: 10px; border-radius: 6px; }
+        .service-list-container label { display: block; margin-bottom: 5px; cursor: pointer; font-weight: normal; font-size: 0.9em;}
+        .service-list-container label:hover { background-color: var(--fundo-tabela-header); }
+        .filter-mode-selector { display: flex; gap: 15px; margin-bottom: 10px; }
+        .ddd-config-grid { display: grid; grid-template-columns: 120px 1fr; gap: 10px 15px; align-items: center; }
+        .ddd-config-grid label { font-weight: bold; }
+
+        @media (max-width: 1200px) { .multi-tables-wrapper { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { 
+            #dashboard-container { display: block; }
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; } 
+            .main-content { margin-left: 0; width: 100%; padding: 20px; } 
         }
     </style>
 </head>
-<body>
-    <div id="app-container"></div>
-    <div id="toast-container"></div>
-    <script type="module" src="index.tsx"></script>
+<body data-theme="dark">
+
+    <div id="login-container">
+        <div class="login-box">
+            <h1>Dashboard Login</h1>
+            <input type="email" id="emailInput" placeholder="seu.email@claro.com.br" autocomplete="email">
+            <input type="password" id="passwordInput" placeholder="Senha">
+            <button id="loginBtn">Entrar</button>
+            <div id="loginError"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-container" class="hidden">
+        <aside class="sidebar">
+            <h1>Dashboard</h1>
+            <div class="controls-section">
+                <label>1. Status da Carga de Dados</label>
+            </div>
+            <div class="controls-section">
+                <label>2. Carregar Dados de Apoio (Opcional)</label>
+                <button id="carregarConfirmadosBtn">Carregar Agenda Tel</button>
+                <button id="carregarDx22Btn">Carregar DX22</button>
+            </div>
+            <div class="controls-section">
+                <label for="dateFilter">Filtrar por Data</label>
+                <input type="date" id="dateFilter">
+            </div>
+
+            <div class="controls-section">
+                <label>Filtrar por Responsável</label>
+                <div id="ddd-filter-container"></div>
+            </div>
+
+            <div class="controls-section">
+                <label>Controles de Exibição</label>
+                <div class="toggle-switch">
+                    <label for="toggleVisitasCidade">Exibir Visitas por Cidade</label>
+                    <label class="switch"><input type="checkbox" id="toggleVisitasCidade" checked><span class="slider"></span></label>
+                </div>
+                <div class="toggle-switch">
+                    <label for="toggleConfigMode">Modo de Configuração</label>
+                    <label class="switch"><input type="checkbox" id="toggleConfigMode"><span class="slider"></span></label>
+                </div>
+                <button id="manage-ddd-btn" style="margin-top: 15px;">Gerenciar DDDs</button>
+            </div>
+            <div id="folderStatus">Carregando dados, aguarde...</div>
+            <div id="confirmadosStatus"></div>
+            <div id="dx22Status"></div>
+            <div id="status"></div>
+            <div id="erro"></div>
+
+            <div class="user-info">
+                <span id="user-email"></span>
+                <button id="logoutBtn">Sair</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <section class="widget scorecards-gerais" id="placares" aria-label="Placares Gerais"></section>
+
+            <section class="widget">
+                <div class="widget-header">
+                    <h2>Painéis de Serviço Personalizados</h2>
+                    <div class="widget-controls">
+                        <button id="add-panel-btn" class="filter-btn">&#x2795; Adicionar Painel</button>
+                    </div>
+                </div>
+            </section>
+            <div id="dynamic-service-panels-wrapper"></div>
+
+            <section class="widget" id="agenda-tel-container" aria-labelledby="agenda-tel-titulo">
+                <div class="widget-header">
+                    <h2 id="agenda-tel-titulo">Análise Agenda Tel</h2>
+                    <div class="widget-controls">
+                        <button id="btnExportarAgendaTel" class="filter-btn" title="Exportar Análise Agenda Tel">&#x1F4E5; Exportar</button>
+                    </div>
+                </div>
+                <div id="agenda-tel-summary-wrapper"></div>
+            </section>
+
+            <section class="widget" id="visitas-cidade-container" aria-labelledby="visitas-cidade-titulo">
+                <div class="widget-header">
+                    <h2 id="visitas-cidade-titulo">Visitas por Cidade</h2>
+                    <div class="widget-controls">
+                        <button id="btnExportarCapacidade" class="filter-btn" title="Exportar Relatório de Capacidade de Cidades">&#x1F4E5; Exportar Capacidade</button>
+                    </div>
+                </div>
+                <div id="visitas-cidade-table-wrapper"></div>
+            </section>
+            
+            <section class="widget" id="codigos-baixa-container" aria-labelledby="codigos-baixa-titulo">
+                <div class="widget-header">
+                    <h2 id="codigos-baixa-titulo">Relatório por Código de Baixa</h2>
+                    <div class="widget-controls">
+                        <button id="btnExportarCodigosBaixa" class="filter-btn" title="Exportar Códigos de Baixa">&#x1F4E5; Exportar</button>
+                        <button class="filter-btn-codigos active" data-filter="todos">Todos</button>
+                        <button class="filter-btn-codigos" data-filter="improdutivos">Improdutivos</button>
+                        <button class="filter-btn-codigos" data-filter="produtivos">Produtivos</button>
+                        <button class="filter-btn-codigos" data-filter="nao-classificados">Não Classificados</button>
+                    </div>
+                </div>
+                <div id="codigos-baixa-tables-wrapper" class="multi-tables-wrapper">
+                    <div id="improdutivos-wrapper"></div>
+                    <div id="produtivos-wrapper"></div>
+                    <div id="nao-classificados-wrapper"></div>
+                </div>
+            </section>
+
+            <section class="widget" id="servicos-cancelados-container" aria-labelledby="servicos-cancelados-titulo">
+                <div class="widget-header">
+                <h2 id="servicos-cancelados-titulo">Serviços Cancelados</h2>
+                <div class="widget-controls">
+                        <button id="btnExportarCancelados" class="filter-btn" title="Exportar Serviços Cancelados">&#x1F4E5; Exportar</button>
+                        <button id="manage-ignored-btn" class="filter-btn">Gerenciar Exclusões</button>
+                </div>
+            </div>
+            <div id="cancelados-table-wrapper"></div>
+        </section>
+            
+            <section class="widget" id="ranking-tecnicos-container" aria-labelledby="ranking-tecnicos-titulo">
+                <div class="widget-header">
+                    <h2 id="ranking-tecnicos-titulo">Desempenho por Técnico</h2>
+                    <div class="widget-controls">
+                        <button id="btnExportarTecnicos" class="filter-btn" title="Exportar Desempenho por Técnico">&#x1F4E5; Exportar</button>
+                    </div>
+                </div>
+                <div id="ranking-tecnicos-table-wrapper"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modais do Dashboard -->
+    <div id="panelConfigModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Configurar Painel de Serviço</h3>
+            <input type="hidden" id="editingPanelId">
+            <div>
+                <label for="panelTitleInput">Título do Painel</label>
+                <input type="text" id="panelTitleInput" placeholder="Ex: Serviços de Streaming">
+            </div>
+            <div>
+                <label>Modo de Filtragem</label>
+                <div class="filter-mode-selector">
+                    <label><input type="radio" name="filterMode" value="include" checked> INCLUIR Marcados</label>
+                    <label><input type="radio" name="filterMode" value="exclude"> EXCLUIR Marcados</label>
+                </div>
+            </div>
+            <div>
+                <label for="serviceSearchInput">Buscar e Selecionar Serviços</label>
+                 <input type="text" id="serviceSearchInput" placeholder="Digite para buscar na lista...">
+            </div>
+            <div id="service-list-container" class="service-list-container"></div>
+            <div class="modal-buttons">
+                <button id="cancelPanelConfigBtn">Cancelar</button>
+                <button id="savePanelConfigBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+    <div id="dddConfigModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Atribuir DDDs aos Responsáveis</h3>
+            <p style="font-size: 0.9em; color: var(--cor-texto-secundario);">Insira os DDDs separados por vírgula (ex: 12, 13, 15).</p>
+            <div id="ddd-config-form" class="ddd-config-grid"></div>
+            <div class="modal-buttons">
+                <button id="cancelDddConfigBtn">Cancelar</button>
+                <button id="saveDddConfigBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+    <div id="ignoredServicesModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Gerenciar Exclusões de Serviços Cancelados</h3>
+            <p style="font-size: 0.9em; color: var(--cor-texto-secundario);">Marque os serviços que devem ser IGNORADOS na contagem de cancelados.</p>
+            <div>
+                <label for="ignoredServiceSearchInput">Buscar Serviço</label>
+                <input type="text" id="ignoredServiceSearchInput" placeholder="Digite para filtrar a lista...">
+            </div>
+            <div id="ignored-service-list-container" class="service-list-container"></div>
+            <div class="modal-buttons">
+                <button id="cancelIgnoredServicesBtn">Cancelar</button>
+                <button id="saveIgnoredServicesBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Declaração de Constantes e Variáveis Globais ---
+        // Controles de Login
+        const loginContainer = document.getElementById('login-container');
+        const dashboardContainer = document.getElementById('dashboard-container');
+        const emailInput = document.getElementById('emailInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const loginError = document.getElementById('loginError');
+        const userEmailDisplay = document.getElementById('user-email');
+
+        // Controles do Dashboard
+        const carregarConfirmadosBtn = document.getElementById('carregarConfirmadosBtn');
+        const carregarDx22Btn = document.getElementById('carregarDx22Btn');
+        const folderStatusDiv = document.getElementById('folderStatus');
+        const confirmadosStatusDiv = document.getElementById('confirmadosStatus');
+        const dx22StatusDiv = document.getElementById('dx22Status');
+        const dateFilter = document.getElementById('dateFilter');
+        const toggleConfigMode = document.getElementById('toggleConfigMode');
+        const toggleVisitasCidade = document.getElementById('toggleVisitasCidade');
+        const visitasCidadeContainer = document.getElementById('visitas-cidade-container');
+        
+        // Variáveis de Dados
+        let dadosCompletosGlobais = [];
+        let dadosCanceladosGlobais = [];
+        let confirmadosGlobais = [];
+        let dx22Globais = [];
+        let resumoCidadesGlobal = {};
+        let dadosExibidosAtualmente = [];
+        let dadosExibidosAtualmenteCancelados = [];
+
+        // Variáveis de Configuração
+        let configuredProductiveCodes = new Set(); 
+        let configuredImproductiveCodes = new Set();
+        let codigoNomesMap = new Map();
+        let paineisServicoConfig = [];
+        let allAvailableServices = [];
+        let ignoredCanceledServices = new Set();
+        
+        let dddMapping = {}; 
+
+        // Constantes
+        const cityToDddMap = { 'AGUDOS': '14', 'AMERICANA': '19', 'ANDRADINA': '18', 'ARACATUBA': '18', 'ARARAQUARA': '16', 'ARARAS': '19', 'AVARE': '14', 'BADY BASSITT': '17', 'BARRETOS': '17', 'BATATAIS': '16', 'BAURU': '14', 'BIRIGUI': '18', 'BOITUVA': '15', 'BOTUCATU': '14', 'CACAPAVA': '12', 'CAMPINAS': '19', 'CAMPOS DO JORDAO': '12', 'CAPIVARI': '19', 'CARAGUATATUBA': '12', 'CATANDUVA': '17', 'CUBATAO': '13', 'DESCALVADO': '19', 'DRACENA': '18', 'FERNANDOPOLIS': '17', 'FRANCA': '16', 'GARCA': '14', 'GUAIRA': '17', 'GUARARAPES': '18', 'GUARATINGUETA': '12', 'GUARUJA': '13', 'HORTOLANDIA': '19', 'INDAIATUBA': '19', 'IPERO': '15', 'ITANHAEM': '13', 'ITAPETININGA': '15', 'JACAREI': '12', 'JAGUARIUNA': '19', 'JAU': '14', 'JOSE BONIFACIO': '17', 'LEME': '19', 'LENCOIS PAULISTA': '14', 'LIMEIRA': '19', 'LINS': '14', 'LORENA': '12', 'LOUVEIRA': '19', 'MARILIA': '14', 'MATAO': '16', 'MIRASSOL': '17', 'MOCOCA': '19', 'MOGI GUACU': '19', 'MOGI MIRIM': '19', 'MONGAGUA': '13', 'NOVA ODESSA': '19', 'PAULINIA': '19', 'PEDREIRA': '19', 'PENAPOLIS': '18', 'PERUIBE': '13', 'PINDAMONHANGABA': '12', 'PIRACICABA': '19', 'PIRASSUNGUGA': '19', 'PORTO FELIZ': '15', 'PORTO FERREIRA': '19', 'PRAIA GRANDE': '13', 'PRESIDENTE PRUDENTE': '18', 'RAFARD': '19', 'REGISTRO': '13', 'RIBEIRAO PRETO': '16', 'RIO CLARO': '19', 'SANTA BARBARA D OESTE': '19', 'SANTA CRUZ DO RIO PARDO': '14', 'SANTA ROSA DE VITERBO': '16', 'SANTOS': '13', 'SAO CARLOS': '16', 'SAO JOAO DA BOA VISTA': '19', 'SAO JOSE DO RIO PARDO': '19', 'SAO JOSE DO RIO PRETO': '17', 'SAO JOSE DOS CAMPOS': '12', 'SAO SEBASTIAO': '12', 'SAO VICENTE': '13', 'SERTAOZINHO': '16', 'SOROCABA': '15', 'SUMARE': '19', 'TATUI': '15', 'TAUBATE': '12', 'TREMEMBE': '12', 'UBATUBA': '12', 'VALINHOS': '19', 'VALPARAISO': '18', 'VINHEDO': '19', 'VOTORANTIM': '15' };
+        const SERVICOS_IGNORADOS_DEFAULT = [ '21 - SUBSTITUICAO DE CONTROLE REMOTO ANALOGICA', '86 - RETIRAR PONTO VOIP', '208 - ENVIO DE CHIP VIA TECNICO' ];
+        const CAPACIDADE_PREDEFINIDA_CIDADES = { 'AGUDOS': 5, 'AMERICANA': 50, 'ANDRADINA': 5, 'ARACATUBA': 20, 'ARARAQUARA': 100, 'ARARAS': 25, 'AVARE': 5, 'BADY BASSITT': 5, 'BARRETOS': 20, 'BATATAIS': 5, 'BAURU': 75, 'BIRIGUI': 5, 'BOITUVA': 10, 'BOTUCATU': 25, 'CACAPAVA': 25, 'CAMPINAS': 175, 'CAMPOS DO JORDAO': 5, 'CAPIVARI': 10, 'CARAGUATATUBA': 50, 'CATANDUVA': 5, 'CUBATAO': 25, 'DESCALVADO': 10, 'DRACENA': 5, 'FERNANDOPOLIS': 5, 'FRANCA': 70, 'GARCA': 5, 'GUAIRA': 20, 'GUARARAPES': 5, 'GUARATINGUETA': 30, 'GUARUJA': 50, 'HORTOLANDIA': 25, 'INDAIATUBA': 60, 'IPERO': 10, 'ITANHAEM': 13, 'ITAPETININGA': 15, 'JACAREI': 12, 'JAGUARIUNA': 19, 'JAU': 25, 'JOSE BONIFACIO': 5, 'LEME': 10, 'LENCOIS PAULISTA': 5, 'LIMEIRA': 25, 'LINS': 5, 'LORENA': 20, 'LOUVEIRA': 5, 'MARILIA': 75, 'MATAO': 5, 'MIRASSOL': 5, 'MOCOCA': 10, 'MOGI GUACU': 15, 'MOGI MIRIM': 15, 'MONGAGUA': 15, 'NOVA ODESSA': 5, 'PAULINIA': 20, 'PEDREIRA': 10, 'PENAPOLIS': 5, 'PERUIBE': 15, 'PINDAMONHANGABA': 12, 'PIRACICABA': 75, 'PIRASSUNGUGA': 10, 'PORTO FELIZ': 25, 'PORTO FERREIRA': 10, 'PRAIA GRANDE': 100, 'PRESIDENTE PRUDENTE': 25, 'RAFARD': 19, 'REGISTRO': 4, 'RIBEIRAO PRETO': 100, 'RIO CLARO': 25, "SANTA BARBARA D OESTE": 25, 'SANTA CRUZ DO RIO PARDO': 25, 'SANTA ROSA DE VITERBO': 5, 'SANTOS': 120, 'SAO CARLOS': 85, 'SAO JOAO DA BOA VISTA': 25, 'SAO JOSE DO RIO PARDO': 10, 'SAO JOSE DO RIO PRETO': 60, 'SAO JOSE DOS CAMPOS': 160, 'SAO SEBASTIAO': 20, 'SAO VICENTE': 50, 'SERTAOZINHO': 20, 'SOROCABA': 200, 'SUMARE': 20, 'TATUI': 25, 'TAUBATE': 60, 'TREMEMBE': 12, 'UBATUBA': 20, 'VALINHOS': 12, 'VALPARAISO': 5, 'VINHEDO': 12, 'VOTORANTIM': 25 };
+        const SERVICOS_CANCELADOS_IGNORADOS_DEFAULT = [
+            'ALMOXARIFADO', 'APOIO A OUTRO TECNICO', 'APOIO MATERIAL',
+            'AUSENCIA POR MOTIVO MEDICO', 'CONSTRUCAO MDU GPON', 'CORTE NO DROP',
+            'FALTA', 'INST GPON - INST CABO', 'INSTALACAO',
+            'MANUT CORRETIVA DEGRADACAO MDU', 'MANUTENCAO CORRETIVA MDU',
+            'MANUTENCAO DO VEICULO', 'MUDANCA DE ENDERECO', 'MUDANCA DE LOCAL',
+            'MUDANCA DE PACOTE', 'NA BASE', 'REFEICAO', 'RETIRAR PONTO',
+            'RETORNO CREDENCIADA', 'TREINAMENTO', 'TROCA DECODER DIGITAL',
+            'VISITA TECNICA'
+        ];
+
+        // --- Lógica de Autenticação ---
+        function showDashboard(email) {
+            loginContainer.classList.add('hidden');
+            dashboardContainer.classList.remove('hidden');
+            userEmailDisplay.textContent = email;
+            initializeDashboard();
+        }
+
+        function showLoginPage() {
+            dashboardContainer.classList.add('hidden');
+            loginContainer.classList.remove('hidden');
+            emailInput.value = '';
+            passwordInput.value = '';
+            loginError.textContent = '';
+        }
+
+        loginBtn.addEventListener('click', () => {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            loginError.textContent = '';
+
+            if (!email.toLowerCase().endsWith('@claro.com.br')) {
+                loginError.textContent = 'Domínio de e-mail inválido. Use seu e-mail @claro.com.br.';
+                return;
+            }
+            if (password !== 'ClaroBrasil') {
+                loginError.textContent = 'Senha incorreta.';
+                return;
+            }
+
+            sessionStorage.setItem('loggedInUserEmail', email);
+            showDashboard(email);
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('loggedInUserEmail');
+            showLoginPage();
+        });
+
+        // --- Funções de Gerenciamento de DDDs ---
+        function loadDddMapping() { const savedMapping = localStorage.getItem('dddMapping'); if (savedMapping) { try { dddMapping = JSON.parse(savedMapping); } catch (e) { console.error("Erro ao carregar mapeamento de DDDs, usando padrão.", e); setDefaultDddMapping(); } } else { setDefaultDddMapping(); } }
+        function setDefaultDddMapping() { dddMapping = { 'Jorge': ['12', '13'], 'Samuel': ['14', '18'], 'Diógenes': ['16', '17'], 'Misael': ['19'] }; }
+        function saveDddMapping() { localStorage.setItem('dddMapping', JSON.stringify(dddMapping)); }
+        function renderDddFilter() { const container = document.getElementById('ddd-filter-container'); container.innerHTML = `<label><input type="radio" name="dddFilter" value="todos" checked> Todos DDDs</label>`; Object.keys(dddMapping).sort().forEach(responsavel => { container.innerHTML += `<label><input type="radio" name="dddFilter" value="${responsavel}"> ${responsavel}</label>`; }); container.addEventListener('change', aplicarFiltrosEAtualizar); }
+        function openDddConfigModal() { const form = document.getElementById('ddd-config-form'); form.innerHTML = ''; Object.keys(dddMapping).forEach(responsavel => { const ddds = dddMapping[responsavel].join(', '); form.innerHTML += ` <label for="ddd-input-${responsavel}">${responsavel}</label> <input type="text" id="ddd-input-${responsavel}" value="${ddds}" data-responsavel="${responsavel}"> `; }); document.getElementById('dddConfigModal').style.display = 'flex'; }
+        function closeDddConfigModal() { document.getElementById('dddConfigModal').style.display = 'none'; }
+        function saveDddConfig() { const inputs = document.querySelectorAll('#ddd-config-form input'); let hasChanges = false; inputs.forEach(input => { const responsavel = input.dataset.responsavel; const newDdds = input.value.split(',').map(d => d.trim()).filter(d => d && !isNaN(d)); if (dddMapping[responsavel].join(',') !== newDdds.join(',')) { dddMapping[responsavel] = newDdds; hasChanges = true; } }); if(hasChanges) { saveDddMapping(); renderDddFilter(); aplicarFiltrosEAtualizar(); } closeDddConfigModal(); }
+        
+        // --- Funções de Gerenciamento de Painéis de Serviço ---
+        function carregarConfiguracaoPaineis() { const savedConfig = localStorage.getItem('paineisServicoConfig'); if (savedConfig) { paineisServicoConfig = JSON.parse(savedConfig); } else { paineisServicoConfig = [ { id: `panel-${Date.now()}`, title: 'Todos os Serviços', mode: 'exclude', selectedServices: SERVICOS_IGNORADOS_DEFAULT } ]; } }
+        function salvarConfiguracaoPaineis() { localStorage.setItem('paineisServicoConfig', JSON.stringify(paineisServicoConfig)); }
+        function adicionarNovoPainel() { const newPanel = { id: `panel-${Date.now()}`, title: 'Novo Painel (Clique para Editar)', mode: 'include', selectedServices: [] }; paineisServicoConfig.push(newPanel); salvarConfiguracaoPaineis(); aplicarFiltrosEAtualizar(); abrirModalConfiguracao(newPanel.id); }
+        function removerPainel(panelId) { if (confirm('Tem certeza que deseja remover este painel?')) { paineisServicoConfig = paineisServicoConfig.filter(p => p.id !== panelId); salvarConfiguracaoPaineis(); aplicarFiltrosEAtualizar(); } }
+        function abrirModalConfiguracao(panelId) { const panel = paineisServicoConfig.find(p => p.id === panelId); if (!panel) return; const modal = document.getElementById('panelConfigModal'); document.getElementById('editingPanelId').value = panel.id; document.getElementById('panelTitleInput').value = panel.title; document.querySelector(`input[name="filterMode"][value="${panel.mode || 'include'}"]`).checked = true; const listContainer = document.getElementById('service-list-container'); listContainer.innerHTML = ''; if (allAvailableServices.length === 0) { listContainer.innerHTML = '<p>Carregue os dados da rota para ver a lista de serviços.</p>'; } else { allAvailableServices.forEach(service => { const isChecked = panel.selectedServices.includes(service); const itemHtml = ` <label> <input type="checkbox" value="${service}" ${isChecked ? 'checked' : ''}> ${service} </label>`; listContainer.insertAdjacentHTML('beforeend', itemHtml); }); } modal.style.display = 'flex'; }
+        function fecharModalConfiguracao() { document.getElementById('panelConfigModal').style.display = 'none'; }
+        function salvarConfiguracaoModal() { const panelId = document.getElementById('editingPanelId').value; const panel = paineisServicoConfig.find(p => p.id === panelId); if (!panel) return; panel.title = document.getElementById('panelTitleInput').value; panel.mode = document.querySelector('input[name="filterMode"]:checked').value; panel.selectedServices = []; document.querySelectorAll('#service-list-container input[type="checkbox"]:checked').forEach(checkbox => { panel.selectedServices.push(checkbox.value); }); salvarConfiguracaoPaineis(); fecharModalConfiguracao(); aplicarFiltrosEAtualizar(); }
+
+        // --- Funções Auxiliares e de Configuração de Códigos ---
+        function getCityCapacityMap() { const saved = localStorage.getItem('cityCapacityMap'); return { ...CAPACIDADE_PREDEFINIDA_CIDADES, ...(saved ? JSON.parse(saved) : {}) }; }
+        function saveCityCapacityMap(map) { localStorage.setItem('cityCapacityMap', JSON.stringify(map)); }
+        function updateCityCapacity(cityName, inputElement) { const newCapacity = parseInt(inputElement.value, 10) || 0; let capacityMap = JSON.parse(localStorage.getItem('cityCapacityMap') || '{}'); capacityMap[cityName.toUpperCase()] = newCapacity; saveCityCapacityMap(capacityMap); aplicarFiltrosEAtualizar(); }
+        function getProductiveCodesDefaultRange() { return Array.from({ length: 525 - 409 + 1 }, (_, i) => String(409 + i)); }
+        
+        function loadConfiguredCodes() { 
+            const savedProductive = localStorage.getItem('customProductiveCodes'); 
+            const savedImproductive = localStorage.getItem('customImproductiveCodes'); 
+            const savedCodeNames = localStorage.getItem('codigoNomesMap');
+            try { configuredProductiveCodes = savedProductive ? new Set(JSON.parse(savedProductive)) : new Set(getProductiveCodesDefaultRange()); } catch (e) { console.error("Erro ao carregar códigos produtivos salvos, usando padrão:", e); configuredProductiveCodes = new Set(getProductiveCodesDefaultRange()); } 
+            try { configuredImproductiveCodes = savedImproductive ? new Set(JSON.parse(savedImproductive)) : new Set(); } catch (e) { console.error("Erro ao carregar códigos improdutivos salvos, usando vazio:", e); configuredImproductiveCodes = new Set(); } 
+            try { codigoNomesMap = savedCodeNames ? new Map(JSON.parse(savedCodeNames)) : new Map(); } catch (e) { console.error("Erro ao carregar nomes de códigos:", e); codigoNomesMap = new Map(); }
+        }
+        
+        function saveConfiguredCodesToLocalStorage() { 
+            localStorage.setItem('customProductiveCodes', JSON.stringify(Array.from(configuredProductiveCodes))); 
+            localStorage.setItem('customImproductiveCodes', JSON.stringify(Array.from(configuredImproductiveCodes))); 
+            localStorage.setItem('codigoNomesMap', JSON.stringify(Array.from(codigoNomesMap.entries())));
+        }
+        
+        function reclassifyCode(code, newStatus) {
+            configuredProductiveCodes.delete(code);
+            configuredImproductiveCodes.delete(code);
+            if (newStatus === 'produtiva') {
+                configuredProductiveCodes.add(code);
+            } else if (newStatus === 'improdutiva') {
+                configuredImproductiveCodes.add(code);
+            }
+            saveConfiguredCodesToLocalStorage();
+            aplicarFiltrosEAtualizar();
+        }
+
+        function getVisitStatus(codigo) {
+            const codigoStr = String(codigo || '').trim();
+            if (codigoStr === '') return 'pendente';
+            if (configuredProductiveCodes.has(codigoStr)) return 'produtiva';
+            if (configuredImproductiveCodes.has(codigoStr)) return 'improdutiva';
+            return 'nao-classificado';
+        }
+
+        function parsePtBrDate(dateStr) { if (!dateStr || typeof dateStr !== 'string') return null; const parts = dateStr.split('/'); if (parts.length === 3) { let year = parseInt(parts[2], 10); if (year < 100) year += 2000; return new Date(year, parts[1] - 1, parts[0]); } return null; }
+        
+        // --- Funções de Gerenciamento de Exclusões de Cancelados ---
+        function loadIgnoredCanceledServices() {
+            const saved = localStorage.getItem('ignoredCanceledServices');
+            if (saved) {
+                try {
+                    ignoredCanceledServices = new Set(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Erro ao carregar serviços ignorados, usando padrão.", e);
+                    ignoredCanceledServices = new Set(SERVICOS_CANCELADOS_IGNORADOS_DEFAULT);
+                }
+            } else {
+                ignoredCanceledServices = new Set(SERVICOS_CANCELADOS_IGNORADOS_DEFAULT);
+            }
+        }
+        function saveIgnoredCanceledServices() {
+            localStorage.setItem('ignoredCanceledServices', JSON.stringify(Array.from(ignoredCanceledServices)));
+        }
+        function openIgnoredServicesModal() {
+            const listContainer = document.getElementById('ignored-service-list-container');
+            const allCanceledServiceTypes = [...new Set(dadosCanceladosGlobais.map(d => (d.tipo_os || '').trim().toUpperCase()).filter(Boolean))].sort();
+            
+            listContainer.innerHTML = '';
+            if (allCanceledServiceTypes.length === 0) {
+                listContainer.innerHTML = '<p>Nenhum tipo de serviço cancelado foi carregado ainda.</p>';
+            } else {
+                allCanceledServiceTypes.forEach(service => {
+                    const isChecked = ignoredCanceledServices.has(service);
+                    const itemHtml = `<label><input type="checkbox" value="${service}" ${isChecked ? 'checked' : ''}> ${service}</label>`;
+                    listContainer.insertAdjacentHTML('beforeend', itemHtml);
+                });
+            }
+            document.getElementById('ignoredServicesModal').style.display = 'flex';
+        }
+        function closeIgnoredServicesModal() {
+            document.getElementById('ignoredServicesModal').style.display = 'none';
+        }
+        function saveIgnoredServicesConfig() {
+            const newIgnoredSet = new Set();
+            document.querySelectorAll('#ignored-service-list-container input:checked').forEach(checkbox => {
+                newIgnoredSet.add(checkbox.value);
+            });
+            ignoredCanceledServices = newIgnoredSet;
+            saveIgnoredCanceledServices();
+            aplicarFiltrosEAtualizar();
+            closeIgnoredServicesModal();
+        }
+
+        // --- Funções de Carregamento de Arquivos ---
+        async function carregarDadosDaURL() {
+            const baseURL = "https://dashboardclarobrasil.z15.web.core.windows.net/";
+            folderStatusDiv.textContent = `Buscando manifesto de arquivos...`;
+            document.getElementById('erro').textContent = '';
+
+            try {
+                // 1. Buscar o Manifesto
+                const manifestURL = baseURL + 'manifesto.json';
+                const manifestResponse = await fetch(manifestURL, { cache: 'no-cache' });
+
+                if (!manifestResponse.ok) {
+                    throw new Error(`Não foi possível carregar o manifesto.json. Status: ${manifestResponse.status}`);
+                }
+
+                const manifestData = await manifestResponse.json();
+
+                // 2. Processar a Lista de Arquivos
+                const xlsxFiles = manifestData
+                    .filter(item => typeof item.fileName === 'string' && item.fileName.toLowerCase().endsWith('.xlsx'))
+                    .map(item => item.fileName);
+
+                if (xlsxFiles.length === 0) {
+                    throw new Error("O manifesto.json não contém arquivos .xlsx válidos para carregar.");
+                }
+
+                folderStatusDiv.textContent = `Carregando ${xlsxFiles.length} arquivos de produção...`;
+
+                // Função auxiliar para buscar e processar um único arquivo (mantida inalterada)
+                const fetchAndProcessFile = async (fileName) => {
+                    const url = baseURL + encodeURIComponent(fileName); // Usa encodeURIComponent para nomes com caracteres especiais
+                    const response = await fetch(url, { cache: 'no-cache' });
+                    if (!response.ok) {
+                        // Retorna nulo em vez de um erro para que Promise.allSettled possa identificá-lo como falha.
+                        console.warn(`Não foi possível encontrar ou carregar o arquivo: ${fileName}`);
+                        return null; 
+                    }
+                    const arrayBuffer = await response.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const range = XLSX.utils.decode_range(sheet['!ref']);
+                    const processed = [];
+                    const canceled = [];
+
+                    for (let R = 1; R <= range.e.r; ++R) {
+                        const get = (col) => sheet[`${col}${R + 1}`]?.v || '';
+                        const dataVal = get('C');
+                        const rowData = {
+                            tecnico: (get('A') || '').toString().trim(),
+                            login: (get('B') || '').toString().trim(),
+                            data: typeof dataVal === 'number' ? new Date(Math.round((dataVal - 25569) * 86400 * 1000)).toLocaleDateString('pt-BR') : (get('C') || '').toString().trim(),
+                            statusAtividade: (get('D') || '').toString().trim(),
+                            cidade: (get('I') || '').toString().trim().toUpperCase(),
+                            horario: (get('M') || '').toString().trim(),
+                            contrato: String(get('Y')).trim().toUpperCase(),
+                            classe: (get('AF') || '').toString().trim(),
+                            empresa: formatarEmpresa((get('DA') || '').toString().trim()),
+                            tipo_os: (get('W') || '').toString().trim()
+                        };
+
+                        if (rowData.statusAtividade.toLowerCase().startsWith('cancelled')) {
+                            canceled.push(rowData); continue;
+                        }
+                        if (!["Classe 8", "Classe 9", "Classe 10", "Classe 12", "Classe 14"].includes(rowData.classe)) continue;
+
+                        const rawCodigoAH = String(get('AH') || '').trim();
+                        const matchCompleto = rawCodigoAH.match(/^(\d+)\s*-\s*(.*)$/);
+                        let codigoExtraido = '', nomeCodigo = '';
+                        if (matchCompleto) {
+                            codigoExtraido = matchCompleto[1]; nomeCodigo = matchCompleto[2].trim();
+                        } else {
+                            const matchNumero = rawCodigoAH.match(/^(\d+)/);
+                            codigoExtraido = matchNumero ? matchNumero[1] : '';
+                        }
+                        if (codigoExtraido && nomeCodigo && !codigoNomesMap.has(codigoExtraido)) {
+                            codigoNomesMap.set(codigoExtraido, nomeCodigo);
+                        }
+                        processed.push({ ...rowData, codigo: codigoExtraido, nomeCodigo: nomeCodigo });
+                    }
+                    return { processed, canceled };
+                };
+
+                // 3. Buscar os Arquivos de Dados
+                const promises = await Promise.allSettled(xlsxFiles.map(fetchAndProcessFile));
+
+                // 4. Consolidar os Dados
+                const allProcessed = [];
+                const allCanceled = [];
+
+                promises
+                    .filter(p => p.status === 'fulfilled' && p.value) // Filtra apenas resultados bem-sucedidos e não nulos
+                    .map(p => p.value)
+                    .forEach(result => {
+                        allProcessed.push(...result.processed);
+                        allCanceled.push(...result.canceled);
+                    });
+                
+                if (allProcessed.length === 0 && allCanceled.length === 0) {
+                    throw new Error("Nenhum arquivo de dados .xlsx foi carregado com sucesso a partir do manifesto.");
+                }
+
+                // Garante que dadosCanceladosGlobais também tenham o dateObj
+                dadosCanceladosGlobais = allCanceled.map(d => ({ ...d, dateObj: parsePtBrDate(d.data) })).filter(d => d.dateObj);
+
+                // 5. Renderizar o Dashboard
+                processarEExibirDados(allProcessed);
+
+            } catch (error) {
+                // 6. Tratamento de Erro
+                console.error('Erro ao carregar dados:', error);
+                folderStatusDiv.textContent = 'Falha ao carregar dados.';
+                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique o arquivo manifesto.json e a disponibilidade dos arquivos.`;
+                renderizarDashboard([], []); // Limpa o dashboard em caso de erro
+            }
+        }
+        
+        async function carregarDadosConfirmados() { try { const [fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Excel Files', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] }); const file = await fileHandle.getFile(); confirmadosStatusDiv.textContent = `Analisando...`; const parsedData = await parseConfirmadosExcel(file); confirmadosGlobais = parsedData; localStorage.setItem('confirmadosTelDados', JSON.stringify(confirmadosGlobais)); aplicarFiltrosEAtualizar(); confirmadosStatusDiv.textContent = `${confirmadosGlobais.length} agendamentos Tel carregados.`; } catch (error) { if (error.name !== 'AbortError') console.error('Erro:', error); } }
+        async function carregarDx22() { try { const [fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Excel Files', accept: { 'application/vnd.ms-excel.sheet.binary.macroenabled.12': ['.xlsb'] } }] }); const file = await fileHandle.getFile(); dx22StatusDiv.textContent = `Analisando DX22...`; const parsedData = await parseDx22Excel(file); dx22Globais = parsedData; localStorage.setItem('dx22Dados', JSON.stringify(dx22Globais)); aplicarFiltrosEAtualizar(); dx22StatusDiv.textContent = `${dx22Globais.length} contratos DX22 carregados.`; } catch (error) { if (error.name !== 'AbortError') console.error('Erro ao carregar DX22:', error); } }
+        
+        function formatarEmpresa(rawEmpresa) {
+            if (!rawEmpresa) return '(Sem Empresa)';
+            const parts = rawEmpresa.split('-');
+            if (parts.length > 1) {
+                const companyPart = parts[1].trim();
+                const words = companyPart.split(' ');
+                return words[0] || '(Sem Empresa)';
+            }
+            return rawEmpresa;
+        }
+        
+        function parseConfirmadosExcel(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { try { const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' }); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }); const headers = jsonData[0]; const [colContrato, colCidade, colGrupo] = ['NR_CONTRATO', 'CIDADE', 'Grupo'].map(h => headers.indexOf(h)); if ([colContrato, colCidade, colGrupo].includes(-1)) { alert('Arquivo de Agenda Tel inválido. Colunas "NR_CONTRATO", "CIDADE", ou "Grupo" não encontradas.'); resolve([]); return; } resolve(jsonData.slice(1) .filter(row => row[colGrupo] === 'Grupo SP Interior' && String(row[colContrato] || '').trim()) .map(row => ({ contrato: String(row[colContrato]).trim().toUpperCase(), cidade: String(row[colCidade] || '').trim().toUpperCase() })) ); } catch (err) { reject(err); } }; reader.onerror = reject; reader.readAsArrayBuffer(file); }); }
+        function parseDx22Excel(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { try { const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' }); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" }); const contractMap = new Map(); jsonData.forEach(row => { const rawContract = row['CONTRATO'] ? String(row['CONTRATO']).trim().toUpperCase() : null; if (rawContract) { const contract = rawContract.split('/').pop(); const city = row['CIDADE DE RETIRADA'] ? String(row['CIDADE DE RETIRADA']).trim().toUpperCase() : ''; if (!contractMap.has(contract)) { contractMap.set(contract, { contrato: contract, cidade: city }); } } }); resolve(Array.from(contractMap.values())); } catch (err) { reject(err); } }; reader.onerror = reject; reader.readAsArrayBuffer(file); }); }
+        
+        // --- Funções de Exportação para Excel ---
+        async function exportarComAnalitico(sheetName, columns, summaryDataRows, totalsRow, analyticalData, fileName) { if (summaryDataRows.length === 0 && analyticalData.length === 0) { alert('Não há dados para exportar.'); return; } const workbook = new ExcelJS.Workbook(); const summarySheet = workbook.addWorksheet(sheetName.substring(0, 30)); summarySheet.columns = columns; summarySheet.addRows(summaryDataRows); if (totalsRow) { summarySheet.addRow([]); const totalRowAdded = summarySheet.addRow(totalsRow); totalRowAdded.font = { bold: true }; } summarySheet.getRow(1).font = { bold: true }; summarySheet.autoFilter = { from: 'A1', to: { row: 1, column: columns.length } }; if (analyticalData.length > 0) { const analiticoSheet = workbook.addWorksheet('Analítico'); analiticoSheet.columns = [ { header: 'Técnico', key: 'tecnico', width: 35 }, { header: 'Login', key: 'login', width: 20 }, { header: 'Data', key: 'data', width: 15 }, { header: 'Status Atividade', key: 'statusAtividade', width: 20 }, { header: 'Cidade', key: 'cidade', width: 30 }, { header: 'Horário', key: 'horario', width: 15 }, { header: 'Contrato', key: 'contrato', width: 20 }, { header: 'Classe', key: 'classe', width: 25 }, { header: 'Código Baixa', key: 'codigo', width: 15 }, { header: 'Descrição Código', key: 'nomeCodigo', width: 45 }, { header: 'Status Código', key: 'statusCodigo', width: 20}, { header: 'Empresa', key: 'empresa', width: 35 }, { header: 'Tipo O.S.', key: 'tipo_os', width: 40 }, ]; analiticoSheet.addRows(analyticalData.map(d => ({...d, statusCodigo: getVisitStatus(d.codigo), nomeCodigo: d.nomeCodigo || codigoNomesMap.get(d.codigo) || ''}))); analiticoSheet.getRow(1).font = { bold: true }; analiticoSheet.autoFilter = 'A1:M1'; } try { const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: "application/octet-stream" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = fileName; link.click(); URL.revokeObjectURL(link.href); } catch (error) { console.error("Erro ao exportar para Excel:", error); document.getElementById('erro').innerText = `Falha ao exportar o arquivo.`; } }
+        async function exportarCapacidadeCidades() { const btn = document.getElementById('btnExportarCapacidade'); if (dadosExibidosAtualmente.length === 0) { alert('Não há dados para exportar.'); return; } btn.disabled = true; btn.innerHTML = '&#x1F504; Exportando...'; try { const workbook = new ExcelJS.Workbook(); const capacitySheet = workbook.addWorksheet('Relatório de Capacidade'); const allCities = Object.values(resumoCidadesGlobal); const cidadesAbaixo = allCities.filter(c => c.capacidade > 0 && c.total < c.capacidade).map(c => ({ ...c, diferenca: c.total - c.capacidade })).sort((a, b) => a.diferenca - b.diferenca); const cidadesAcima = allCities.filter(c => c.capacidade > 0 && c.total > c.capacidade).map(c => ({ ...c, diferenca: c.total - c.capacidade })).sort((a, b) => b.diferenca - a.diferenca); const mainHeaderFont = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 }; const columnHeaderStyle = { font: { bold: true, color: { argb: 'FF000000' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBFBFBF' } }, alignment: { horizontal: 'center', vertical: 'middle' }, border: { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } } }; const boldFont = { bold: true }; const cellBorder = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; const centerAlign = { vertical: 'middle', horizontal: 'center' }; const leftAlign = { vertical: 'middle', horizontal: 'left' }; const fills = { yellow: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } }, purple: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } }, blue: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDAEEF3' } }, green: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } }, lightRed: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } } }; capacitySheet.mergeCells('A1:H1'); capacitySheet.getCell('A1').value = 'CIDADES ABAIXO DA CAPACIDADE'; capacitySheet.getCell('A1').style = { font: mainHeaderFont, alignment: centerAlign, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } } }; capacitySheet.getRow(2).values = ['Cidade', 'Total Agendado', 'Capacidade', 'Agenda Tel', 'Agenda Quente', 'Agenda Fria', 'Box', 'Abaixo']; cidadesAbaixo.forEach((c, index) => { const row = capacitySheet.getRow(index + 3); row.values = [c.cidade, c.total, c.capacidade, c.agendaTel, c.agendaQuente, c.agendaFria, c.box, c.diferenca]; row.getCell(1).font = boldFont; row.getCell(1).fill = fills.yellow; row.getCell(1).alignment = leftAlign; row.getCell(2).fill = fills.yellow; row.getCell(3).font = boldFont; row.getCell(3).fill = fills.yellow; row.getCell(4).fill = fills.purple; row.getCell(5).fill = fills.yellow; row.getCell(6).fill = fills.blue; row.getCell(7).fill = fills.green; row.getCell(8).font = boldFont; row.getCell(8).fill = fills.yellow; }); capacitySheet.mergeCells('J1:Q1'); capacitySheet.getCell('J1').value = 'CIDADES ACIMA DA CAPACIDADE'; capacitySheet.getCell('J1').style = { font: mainHeaderFont, alignment: centerAlign, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } } }; const headersAcima = ['Cidade', 'Total Agendado', 'Capacidade', 'Agenda Tel', 'Agenda Quente', 'Agenda Fria', 'Box', 'Acima']; headersAcima.forEach((h, i) => capacitySheet.getCell(2, i + 10).value = h); cidadesAcima.forEach((c, index) => { const row = capacitySheet.getRow(index + 3); row.getCell(10).value = c.cidade; row.getCell(10).font = boldFont; row.getCell(10).fill = fills.yellow; row.getCell(11).value = c.total; row.getCell(11).fill = fills.yellow; row.getCell(12).value = c.capacidade; row.getCell(12).font = boldFont; row.getCell(12).fill = fills.yellow; row.getCell(13).value = c.agendaTel; row.getCell(13).fill = fills.purple; row.getCell(14).value = c.agendaQuente; row.getCell(14).fill = fills.yellow; row.getCell(15).value = c.agendaFria; row.getCell(15).fill = fills.blue; row.getCell(16).value = c.box; row.getCell(16).fill = fills.green; row.getCell(17).value = c.diferenca; row.getCell(17).font = boldFont; row.getCell(17).fill = fills.lightRed; }); capacitySheet.eachRow((row, rowNumber) => { row.eachCell({ includeEmpty: true }, (cell, colNumber) => { if (rowNumber === 2) { cell.style = columnHeaderStyle; } else if (rowNumber > 2) { cell.border = cellBorder; if (colNumber !== 1 && colNumber !== 10) { cell.alignment = centerAlign; } } }); }); capacitySheet.columns = [ { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 10 }, { width: 10 }, { width: 3 }, { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 10 }, { width: 10 }]; const analiticoSheet = workbook.addWorksheet('Analítico'); const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); analiticoSheet.columns = [ { header: 'Técnico', key: 'tecnico', width: 35 }, { header: 'Login', key: 'login', width: 20 }, { header: 'Data', key: 'data', width: 15 }, { header: 'Status Atividade', key: 'statusAtividade', width: 20 }, { header: 'Cidade', key: 'cidade', width: 30 }, { header: 'Horário', key: 'horario', width: 15 }, { header: 'Contrato', key: 'contrato', width: 20 }, { header: 'Classe', key: 'classe', width: 25 }, { header: 'Código Baixa', key: 'codigo', width: 15 }, { header: 'Descrição Código', key: 'nomeCodigo', width: 45 }, { header: 'Status Código', key: 'statusCodigo', width: 20}, { header: 'Empresa', key: 'empresa', width: 35 }, { header: 'Tipo O.S.', key: 'tipo_os', width: 40 }, { header: 'Agenda Tel', key: 'agendaTel', width: 15 }]; analiticoSheet.addRows(dadosExibidosAtualmente.map(d => ({ ...d, agendaTel: confirmadosContratosSet.has(d.contrato) ? 'Sim' : 'Não', statusCodigo: getVisitStatus(d.codigo), nomeCodigo: d.nomeCodigo || codigoNomesMap.get(d.codigo) || '' }))); analiticoSheet.getRow(1).font = { bold: true }; analiticoSheet.autoFilter = 'A1:N1'; const buffer = await workbook.xlsx.writeBuffer(); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([buffer], { type: "application/octet-stream" })); link.download = `Relatorio_Produtividade_Geral_${new Date().toISOString().slice(0,10)}.xlsx`; link.click(); } catch (error) { console.error("Erro ao exportar:", error); document.getElementById('erro').innerText = 'Falha ao exportar relatório.'; } finally { btn.disabled = false; btn.innerHTML = '&#x1F4E5; Exportar Capacidade'; } }
+        async function exportarContratosPorTipoServico(tipoServico) { if (dadosExibidosAtualmente.length === 0) { alert('Não há dados para exportar.'); return; } const contratosFiltrados = dadosExibidosAtualmente.filter(d => (d.tipo_os || '').trim() === tipoServico ); if (contratosFiltrados.length === 0) { alert(`Nenhum contrato encontrado para o tipo de serviço "${tipoServico}" na data selecionada.`); return; } const workbook = new ExcelJS.Workbook(); const sheet = workbook.addWorksheet(`Contratos - ${tipoServico.substring(0, 25).trim()}`); sheet.columns = [ { header: 'Contrato', key: 'contrato', width: 20 }, { header: 'Cidade', key: 'cidade', width: 30 }, { header: 'Horário', key: 'horario', width: 15 }, { header: 'Classe', key: 'classe', width: 15 }, { header: 'Empresa (Recurso Pai)', key: 'empresa', width: 35 }, { header: 'Tipo O.S', key: 'tipo_os', width: 30 }, { header: 'Status Atividade', key: 'statusAtividade', width: 20 }, { header: 'Código de Baixa', key: 'codigo', width: 18 }, { header: 'Descrição Código', key: 'nomeCodigo', width: 45 }, { header: 'Status Código', key: 'statusCodigo', width: 20 } ]; contratosFiltrados.forEach(d => { sheet.addRow({ contrato: d.contrato, cidade: d.cidade, horario: d.horario, classe: d.classe, empresa: d.empresa, tipo_os: d.tipo_os, statusAtividade: d.statusAtividade, codigo: d.codigo, nomeCodigo: d.nomeCodigo || codigoNomesMap.get(d.codigo) || '', statusCodigo: getVisitStatus(d.codigo) }); }); sheet.getRow(1).font = { bold: true }; sheet.autoFilter = 'A1:J1'; try { const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: "application/octet-stream" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Contratos_${tipoServico.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`; link.click(); URL.revokeObjectURL(link.href); } catch (error) { console.error("Erro ao exportar contratos por tipo de serviço:", error); document.getElementById('erro').innerText = `Falha ao exportar contratos para ${tipoServico}.`; } }
+        function processServiceDataForExport(data) { const resumoServicos = data.reduce((acc, d) => { const tipoServico = (d.tipo_os || '').trim() || 'Serviço Não Especificado'; if (!acc[tipoServico]) acc[tipoServico] = { tipoServico, produtivas: 0, improdutivas: 0, pendentes: 0, naoClassificados: 0, total: 0 }; const s = acc[tipoServico]; s.total++; const status = getVisitStatus(d.codigo); if (status === 'produtiva') s.produtivas++; else if (status === 'improdutiva') s.improdutivas++; else if (status === 'pendente') s.pendentes++; else s.naoClassificados++; return acc; }, {}); const dataRows = Object.values(resumoServicos).sort((a, b) => a.tipoServico.localeCompare(b.tipoServico)).map(s => ({ tipoServico: s.tipoServico, improdutivas: s.improdutivas, produtivas: s.produtivas, pendentes: s.pendentes, naoClassificados: s.naoClassificados, total: s.total, prodPercent: s.total > 0 ? parseFloat(((s.produtivas / s.total) * 100).toFixed(2)) : 0 })); const totalImprodutivas = dataRows.reduce((sum, s) => sum + s.improdutivas, 0); const totalProdutivas = dataRows.reduce((sum, s) => sum + s.produtivas, 0); const totalPendentes = dataRows.reduce((sum, s) => sum + s.pendentes, 0); const totalNaoClassificados = dataRows.reduce((sum, s) => sum + s.naoClassificados, 0); const totalGeral = dataRows.reduce((sum, s) => sum + s.total, 0); const totalsRow = { tipoServico: 'Total Geral', improdutivas: totalImprodutivas, produtivas: totalProdutivas, pendentes: totalPendentes, naoClassificados: totalNaoClassificados, total: totalGeral, prodPercent: totalGeral > 0 ? parseFloat(((totalProdutivas / totalGeral) * 100).toFixed(2)) : 0 }; return { dataRows, totalsRow }; }
+        function handleExportPainelServico(panelId) { const panelConfig = paineisServicoConfig.find(p => p.id === panelId); if (!panelConfig) return; const selectedServicesSet = new Set(panelConfig.selectedServices); const dadosFiltrados = dadosExibidosAtualmente.filter(d => { const tipoServico = (d.tipo_os || '').trim(); if (tipoServico === '') return false; if (panelConfig.mode === 'include') return selectedServicesSet.has(tipoServico); else return !selectedServicesSet.has(tipoServico); }); const { dataRows, totalsRow } = processServiceDataForExport(dadosFiltrados); const fileName = `Painel_${panelConfig.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`; const columns = [ { header: 'Tipo de Serviço', key: 'tipoServico', width: 40 }, { header: 'Improdutivas', key: 'improdutivas', width: 15 }, { header: 'Produtivas', key: 'produtivas', width: 15 }, { header: 'Pendentes', key: 'pendentes', width: 15 }, { header: 'Não Classificados', key: 'naoClassificados', width: 18}, { header: 'Total', key: 'total', width: 15 }, { header: 'Produtividade (%)', key: 'prodPercent', width: 20, style: { numFmt: '0.00"%"' } } ]; exportarComAnalitico(panelConfig.title, columns, dataRows, totalsRow, dadosFiltrados, fileName); }
+        function exportarAgendaTel() { if (confirmadosGlobais.length === 0) { alert('Carregue o arquivo "Agenda Tel" primeiro.'); return; } const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); const dadosAgendaTel = dadosExibidosAtualmente.filter(d => confirmadosContratosSet.has(d.contrato)); const { dataRows, totalsRow } = processServiceDataForExport(dadosAgendaTel); const fileName = `Analise_Agenda_Tel_${new Date().toISOString().slice(0,10)}.xlsx`; const columns = [ { header: 'Tipo de Serviço', key: 'tipoServico', width: 40 }, { header: 'Improdutivas', key: 'improdutivas', width: 15 }, { header: 'Produtivas', key: 'produtivas', width: 15 }, { header: 'Pendentes', key: 'pendentes', width: 15 }, { header: 'Não Classificados', key: 'naoClassificados', width: 18}, { header: 'Total', key: 'total', width: 15 }, { header: 'Produtividade (%)', key: 'prodPercent', width: 20, style: { numFmt: '0.00"%"' } } ]; exportarComAnalitico('Agenda Tel', columns, dataRows, totalsRow, dadosAgendaTel, fileName); }
+        function exportarDesempenhoTecnicos() { const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); const resumoTecnicos = dadosExibidosAtualmente.reduce((acc, d) => { const tecnico = d.tecnico || '(Sem Técnico)'; if (!acc[tecnico]) acc[tecnico] = { tecnico: tecnico, login: d.login, empresa: d.empresa, produtivas: 0, improdutivas: 0, pendentes: 0, naoClassificados: 0, agendaQuente: 0, agendaFria: 0, box: 0, chip: 0, agendaTel: 0, total: 0 }; const t = acc[tecnico]; t.total++; const status = getVisitStatus(d.codigo); if (status === 'produtiva') t.produtivas++; else if (status === 'improdutiva') t.improdutivas++; else if (status === 'pendente') t.pendentes++; else t.naoClassificados++; if (d.horario === '08 - 12' || d.horario === '12 - 18') t.agendaQuente++; else if (d.horario === '08 - 22') t.agendaFria++; if (d.classe === 'Classe 14') t.box++; if (confirmadosContratosSet.has(d.contrato)) t.agendaTel++; return acc; }, {}); const dataRows = Object.values(resumoTecnicos).sort((a, b) => b.produtivas - a.produtivas); const fileName = `Desempenho_Tecnicos_${new Date().toISOString().slice(0,10)}.xlsx`; const columns = [ { header: 'Login', key: 'login', width: 20 }, { header: 'Técnico', key: 'tecnico', width: 35 }, { header: 'Empresa', key: 'empresa', width: 25 }, { header: 'Produtivas', key: 'produtivas', width: 15 }, { header: 'Improdutivas', key: 'improdutivas', width: 15 }, { header: 'Pendentes', key: 'pendentes', width: 15 }, { header: 'Não Classificados', key: 'naoClassificados', width: 18 }, { header: 'Agenda Quente', key: 'agendaQuente', width: 18 }, { header: 'Agenda Fria', key: 'agendaFria', width: 15 }, { header: 'Box', key: 'box', width: 10 }, { header: 'Chip', key: 'chip', width: 10 }, { header: 'Agenda Tel', key: 'agendaTel', width: 15 }, { header: 'Total', key: 'total', width: 15 } ]; exportarComAnalitico('Desempenho por Técnico', columns, dataRows, null, dadosExibidosAtualmente, fileName); }
+        async function exportarCodigosBaixa() { const dadosFiltradosCodigos = dadosExibidosAtualmente.filter(d => getVisitStatus(d.codigo) !== 'pendente'); const resumoCodigos = dadosFiltradosCodigos.reduce((acc, d) => { const status = getVisitStatus(d.codigo); if (!acc[d.codigo]) { acc[d.codigo] = { codigo: d.codigo, nome: d.nomeCodigo || codigoNomesMap.get(d.codigo) || '', quantidade: 0, status: status }; } acc[d.codigo].quantidade++; return acc; }, {}); const codigosData = Object.values(resumoCodigos); if (codigosData.length === 0) { alert('Não há dados de códigos de baixa para exportar.'); return; } const produtivos = codigosData.filter(c => c.status === 'produtiva').sort((a,b) => parseInt(a.codigo) - parseInt(b.codigo)); const improdutivos = codigosData.filter(c => c.status === 'improdutiva').sort((a,b) => parseInt(a.codigo) - parseInt(b.codigo)); const naoClassificados = codigosData.filter(c => c.status === 'nao-classificado').sort((a,b) => parseInt(a.codigo) - parseInt(b.codigo)); const workbook = new ExcelJS.Workbook(); const columns = [ { header: 'Código', key: 'codigo', width: 15 }, { header: 'Descrição', key: 'nome', width: 45}, { header: 'Quantidade', key: 'quantidade', width: 15 } ]; const improdutivosSheet = workbook.addWorksheet('Improdutivos'); improdutivosSheet.columns = columns; improdutivosSheet.addRows(improdutivos); improdutivosSheet.getRow(1).font = { bold: true }; const produtivosSheet = workbook.addWorksheet('Produtivos'); produtivosSheet.columns = columns; produtivosSheet.addRows(produtivos); const totalProdutivos = produtivos.reduce((sum, item) => sum + item.quantidade, 0); produtivosSheet.addRow([]); const totalRow = produtivosSheet.addRow({ codigo: 'TOTAL', quantidade: totalProdutivos }); totalRow.font = { bold: true }; produtivosSheet.getRow(1).font = { bold: true }; const naoClassificadosSheet = workbook.addWorksheet('Não Classificados'); naoClassificadosSheet.columns = columns; naoClassificadosSheet.addRows(naoClassificados); naoClassificadosSheet.getRow(1).font = { bold: true }; const analiticoSheet = workbook.addWorksheet('Analítico'); analiticoSheet.columns = [ { header: 'Técnico', key: 'tecnico', width: 35 }, { header: 'Login', key: 'login', width: 20 }, { header: 'Data', key: 'data', width: 15 }, { header: 'Cidade', key: 'cidade', width: 30 }, { header: 'Contrato', key: 'contrato', width: 20 }, { header: 'Código Baixa', key: 'codigo', width: 15 }, { header: 'Descrição Código', key: 'nomeCodigo', width: 45}, { header: 'Status Código', key: 'statusCodigo', width: 20}, { header: 'Tipo O.S.', key: 'tipo_os', width: 40 }]; analiticoSheet.addRows(dadosFiltradosCodigos.map(d => ({...d, statusCodigo: getVisitStatus(d.codigo), nomeCodigo: d.nomeCodigo || codigoNomesMap.get(d.codigo) || '' }))); analiticoSheet.getRow(1).font = { bold: true }; analiticoSheet.autoFilter = 'A1:I1'; const fileName = `Relatorio_Codigos_Baixa_${new Date().toISOString().slice(0,10)}.xlsx`; try { const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: "application/octet-stream" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = fileName; link.click(); URL.revokeObjectURL(link.href); } catch (error) { console.error("Erro ao exportar códigos de baixa:", error); document.getElementById('erro').innerText = `Falha ao exportar o arquivo.`; } }
+        async function exportarCancelados() {
+            const dadosFiltrados = dadosExibidosAtualmenteCancelados.filter(d => 
+                !ignoredCanceledServices.has((d.tipo_os || '').trim().toUpperCase())
+            );
+
+            if (dadosFiltrados.length === 0) {
+                alert('Não há serviços cancelados (relevantes) para exportar na data selecionada.');
+                return;
+            }
+
+            const workbook = new ExcelJS.Workbook();
+            const summarySheet = workbook.addWorksheet('Resumo');
+            summarySheet.columns = [
+                { header: 'Tipo de Serviço', key: 'tipo_os', width: 50 },
+                { header: 'Quantidade', key: 'quantidade', width: 15 }
+            ];
+            const resumo = dadosFiltrados.reduce((acc, d) => {
+                const tipoServico = d.tipo_os || 'Não Especificado';
+                acc[tipoServico] = (acc[tipoServico] || 0) + 1;
+                return acc;
+            }, {});
+            const summaryData = Object.entries(resumo)
+                .map(([tipo_os, quantidade]) => ({ tipo_os, quantidade }))
+                .sort((a, b) => a.tipo_os.localeCompare(b.tipo_os));
+            summarySheet.addRows(summaryData);
+            summarySheet.getRow(1).font = { bold: true };
+
+            const analiticoSheet = workbook.addWorksheet('Analítico');
+            analiticoSheet.columns = [
+                { header: 'Técnico', key: 'tecnico', width: 35 },
+                { header: 'Login', key: 'login', width: 20 },
+                { header: 'Data', key: 'data', width: 15 },
+                { header: 'Cidade', key: 'cidade', width: 30 },
+                { header: 'Contrato', key: 'contrato', width: 20 },
+                { header: 'Tipo O.S.', key: 'tipo_os', width: 40 },
+                { header: 'Status Atividade', key: 'statusAtividade', width: 20 }
+            ];
+            analiticoSheet.addRows(dadosFiltrados);
+            analiticoSheet.getRow(1).font = { bold: true };
+            analiticoSheet.autoFilter = 'A1:G1';
+
+            const fileName = `Relatorio_Servicos_Cancelados_${new Date().toISOString().slice(0,10)}.xlsx`;
+            try {
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: "application/octet-stream" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            } catch (error) {
+                console.error("Erro ao exportar serviços cancelados:", error);
+                document.getElementById('erro').innerText = `Falha ao exportar o arquivo de cancelados.`;
+            }
+        }
+
+        // --- Renderização e Lógica Principal ---
+        function renderCodigosBaixaTables(codigosData) {
+            const improdutivosWrapper = document.getElementById('improdutivos-wrapper');
+            const produtivosWrapper = document.getElementById('produtivos-wrapper');
+            const naoClassificadosWrapper = document.getElementById('nao-classificados-wrapper');
+
+            const isConfigMode = !document.body.classList.contains('config-mode-inactive');
+            
+            const produtivos = codigosData.filter(c => c.status === 'produtiva').sort((a,b) => parseInt(a.codigo) - parseInt(b.codigo));
+            const improdutivos = codigosData.filter(c => c.status === 'improdutiva').sort((a,b) => parseInt(a.codigo) - parseInt(b.codigo));
+            const naoClassificados = codigosData.filter(c => c.status === 'nao-classificado').sort((a,b) => parseInt(a.codigo) - parseInt(b.codigo));
+
+            const configHeader = isConfigMode ? `<th class="config-column-codigos">Configurar</th>` : '';
+
+            const buildConfigRow = (item) => {
+                if (!isConfigMode) return '';
+                const checkedProd = item.status === 'produtiva' ? 'checked' : '';
+                const checkedImprod = item.status === 'improdutiva' ? 'checked' : '';
+                return `<td class="config-column-codigos">
+                    <div class="radio-group">
+                        <label title="Marcar como improdutivo"><input type="radio" name="config-code-${item.codigo}" value="improdutiva" ${checkedImprod} onclick="reclassifyCode('${item.codigo}', 'improdutiva')"> Imp</label>
+                        <label title="Marcar como produtivo"><input type="radio" name="config-code-${item.codigo}" value="produtiva" ${checkedProd} onclick="reclassifyCode('${item.codigo}', 'produtiva')"> Prod</label>
+                    </div>
+                </td>`;
+            };
+
+            const generateTableHTML = (title, data, showTotal = false) => {
+                let html = `<h3>${title}</h3><table><thead><tr><th>Código / Descrição</th><th>Qtde.</th>${configHeader}</tr></thead><tbody>`;
+                let total = 0;
+                data.forEach(item => {
+                    html += `<tr>
+                                <td>
+                                    <strong>${item.codigo}</strong><br>
+                                    <small style="color: var(--cor-texto-secundario);">${item.nome || '(Sem descrição)'}</small>
+                                </td>
+                                <td>${item.quantidade}</td>
+                                ${buildConfigRow(item)}
+                             </tr>`;
+                    total += item.quantidade;
+                });
+                if (showTotal) {
+                    html += `<tr class="ranking-total-row"><td><strong>TOTAL</strong></td><td>${total}</td>${isConfigMode ? '<td></td>': ''}</tr>`;
+                }
+                html += '</tbody></table>';
+                return html;
+            };
+
+            improdutivosWrapper.innerHTML = generateTableHTML('Improdutivos', improdutivos);
+            produtivosWrapper.innerHTML = generateTableHTML('Produtivos', produtivos, true);
+            naoClassificadosWrapper.innerHTML = generateTableHTML('Não Classificados', naoClassificados);
+        }
+        function aplicarFiltrosEAtualizar() { 
+            const dataSelecionada = dateFilter.value; 
+            if (!dataSelecionada) { 
+                renderizarDashboard([], []); 
+                return; 
+            } 
+            
+            let dadosDoDia = dadosCompletosGlobais.filter(d => d.dateObj && d.dateObj.toISOString().split('T')[0] === dataSelecionada); 
+            let dadosCanceladosDoDia = dadosCanceladosGlobais.filter(d => d.dateObj && d.dateObj.toISOString().split('T')[0] === dataSelecionada);
+
+            const responsavelSelecionado = document.querySelector('input[name="dddFilter"]:checked')?.value; 
+            if (responsavelSelecionado && responsavelSelecionado !== 'todos') { 
+                const dddsDoResponsavel = new Set(dddMapping[responsavelSelecionado]); 
+                dadosDoDia = dadosDoDia.filter(d => { const dddDaCidade = cityToDddMap[d.cidade]; return dddDaCidade && dddsDoResponsavel.has(dddDaCidade); }); 
+                dadosCanceladosDoDia = dadosCanceladosDoDia.filter(d => { const dddDaCidade = cityToDddMap[d.cidade]; return dddDaCidade && dddsDoResponsavel.has(dddDaCidade); }); 
+            } 
+            
+            dadosExibidosAtualmente = dadosDoDia; 
+            dadosExibidosAtualmenteCancelados = dadosCanceladosDoDia;
+            allAvailableServices = [...new Set(dadosCompletosGlobais.map(d => (d.tipo_os || '').trim()).filter(Boolean))].sort(); 
+            
+            renderizarDashboard(dadosExibidosAtualmente, dadosExibidosAtualmenteCancelados); 
+        }
+        function processarEExibirDados(dadosCrus) { 
+            const statusPriority = { 'complete': 1, 'suspended': 2, 'started': 3, 'enroute': 4, 'pending': 5 }; 
+            const getPriority = (status) => statusPriority[Object.keys(statusPriority).find(k => (status||'').toLowerCase().startsWith(k))] || 99; 
+            const cidadesValidasSet = new Set(Object.keys(getCityCapacityMap())); 
+            const uniqueContractsMap = new Map(); 
+            for (const currentRow of dadosCrus) { 
+                if (!currentRow.contrato || !cidadesValidasSet.has(currentRow.cidade)) continue; 
+                const existingRow = uniqueContractsMap.get(currentRow.contrato); 
+                if (!existingRow || getPriority(currentRow.statusAtividade) < getPriority(existingRow.statusAtividade)) { 
+                    uniqueContractsMap.set(currentRow.contrato, currentRow); 
+                } 
+            } 
+            dadosCompletosGlobais = Array.from(uniqueContractsMap.values()).map(d => ({ ...d, dateObj: parsePtBrDate(d.data) })).filter(d => d.dateObj); 
+            
+            if (dadosCompletosGlobais.length > 0 || dadosCanceladosGlobais.length > 0) {
+                if(!dateFilter.value) { 
+                    const allDates = [...dadosCompletosGlobais, ...dadosCanceladosGlobais].map(d => d.dateObj);
+                    const maxDate = new Date(Math.max(...allDates.filter(d => d))); 
+                    if(!isNaN(maxDate)) { dateFilter.value = maxDate.toISOString().split('T')[0]; }
+                } 
+                saveConfiguredCodesToLocalStorage(); 
+                aplicarFiltrosEAtualizar(); 
+                folderStatusDiv.textContent = `${dadosCompletosGlobais.length} visitas ativas e ${dadosCanceladosGlobais.length} canceladas carregadas.`;
+            } else { 
+                renderizarDashboard([], []); 
+                document.getElementById('erro').innerText = 'Nenhuma visita válida encontrada.'; 
+            } 
+        }
+        function renderizarTabelaServicoParaPainel(containerId, dadosPanel) { const container = document.getElementById(containerId); if (!container) return; const { dataRows, totalsRow } = processServiceDataForExport(dadosPanel); let servicoHTML = `<table> <thead><tr> <th>Tipo de Serviço</th><th class="col-improdutiva-header">Improdutivas</th><th class="col-produtiva-header">Produtivas</th><th class="col-pendente-header">Pendentes</th><th class="col-nao-classificado-header">Não Class.</th> <th>Total</th><th>Prod%</th> </tr></thead><tbody>`; if(dataRows.length > 0) { dataRows.forEach(s => { servicoHTML += `<tr> <td>${s.tipoServico} <span class="lupa-icon" title="Ver contratos detalhados para ${s.tipoServico}" onclick="exportarContratosPorTipoServico('${s.tipoServico.replace(/'/g, "\\'")}')">&#x1F50E;&#xFE0E;</span></td> <td class="col-improdutiva">${s.improdutivas}</td><td class="col-produtiva">${s.produtivas}</td> <td class="col-pendente">${s.pendentes}</td><td class="col-nao-classificado">${s.naoClassificados}</td><td><strong>${s.total}</strong></td><td>${s.prodPercent.toFixed(0)}%</td> </tr>`; }); servicoHTML += `<tr class="ranking-total-row"> <td>${totalsRow.tipoServico}</td><td class="col-improdutiva">${totalsRow.improdutivas}</td><td class="col-produtiva">${totalsRow.produtivas}</td> <td class="col-pendente">${totalsRow.pendentes}</td><td class="col-nao-classificado">${totalsRow.naoClassificados}</td><td><strong>${totalsRow.total}</strong></td><td>${totalsRow.prodPercent.toFixed(0)}%</td> </tr>`; } else { servicoHTML += `<tr><td colspan="7" style="text-align:center;">Nenhum serviço corresponde aos filtros para esta data.</td></tr>`; } container.innerHTML = servicoHTML + '</tbody></table>'; }
+        function renderizarPaineisServico(dados) { const wrapper = document.getElementById('dynamic-service-panels-wrapper'); wrapper.innerHTML = ''; paineisServicoConfig.forEach(panelConfig => { const panelContainer = document.createElement('section'); panelContainer.className = 'widget service-panel-instance'; panelContainer.innerHTML = ` <div class="widget-header"> <h3 contenteditable="true" data-panel-id="${panelConfig.id}">${panelConfig.title}</h3> <div class="widget-controls"> <button class="filter-btn" data-action="export" data-panel-id="${panelConfig.id}" title="Exportar dados do painel">&#x1F4E5; Exportar</button> <button class="filter-btn" data-action="edit" data-panel-id="${panelConfig.id}">Configurar</button> <button class="filter-btn" data-action="delete" data-panel-id="${panelConfig.id}">Remover</button> </div> </div> <div class="panel-table-wrapper" id="table-wrapper-${panelConfig.id}"></div> `; wrapper.appendChild(panelContainer); const selectedServicesSet = new Set(panelConfig.selectedServices); const dadosFiltrados = dados.filter(d => { const tipoServico = (d.tipo_os || '').trim(); if (tipoServico === '') return false; if (panelConfig.mode === 'include') { return selectedServicesSet.has(tipoServico); } else { return !selectedServicesSet.has(tipoServico); } }); renderizarTabelaServicoParaPainel(`table-wrapper-${panelConfig.id}`, dadosFiltrados); }); wrapper.querySelectorAll('h3[contenteditable="true"]').forEach(h3 => { h3.addEventListener('blur', (e) => { const panelId = e.target.dataset.panelId; const newTitle = e.target.innerText.trim(); const panel = paineisServicoConfig.find(p => p.id === panelId); if (panel && panel.title !== newTitle) { panel.title = newTitle; salvarConfiguracaoPaineis(); } }); h3.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } }); }); }
+        function renderizarPainelAgendaTel(dados) { const wrapper = document.getElementById('agenda-tel-summary-wrapper'); if (confirmadosGlobais.length === 0) { wrapper.innerHTML = '<p>Carregue o arquivo "Agenda Tel" para ver esta análise.</p>'; return; } const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); const dadosAgendaTel = dados.filter(d => confirmadosContratosSet.has(d.contrato)); if (dadosAgendaTel.length === 0) { wrapper.innerHTML = '<p>Nenhuma visita da "Agenda Tel" foi encontrada na rota do dia selecionado.</p>'; return; } renderizarTabelaServicoParaPainel('agenda-tel-summary-wrapper', dadosAgendaTel); }
+        function renderizarPainelCancelados(dadosCancelados) {
+            const wrapper = document.getElementById('cancelados-table-wrapper');
+            
+            const dadosFiltrados = dadosCancelados.filter(d => 
+                !ignoredCanceledServices.has((d.tipo_os || '').trim().toUpperCase())
+            );
+
+            if (!dadosFiltrados || dadosFiltrados.length === 0) {
+                wrapper.innerHTML = '<p>Nenhum serviço cancelado (relevante) encontrado para esta data.</p>';
+                return;
+            }
+
+            const resumo = dadosFiltrados.reduce((acc, d) => {
+                const tipoServico = d.tipo_os || 'Não Especificado';
+                acc[tipoServico] = (acc[tipoServico] || 0) + 1;
+                return acc;
+            }, {});
+
+            const dataRows = Object.entries(resumo)
+                .map(([tipo_os, quantidade]) => ({ tipo_os, quantidade }))
+                .sort((a, b) => b.quantidade - a.quantidade);
+
+            let total = 0;
+            let tableHTML = '<table><thead><tr><th>Tipo de Serviço</th><th>Quantidade</th></tr></thead><tbody>';
+            dataRows.forEach(row => {
+                tableHTML += `<tr><td>${row.tipo_os}</td><td>${row.quantidade}</td></tr>`;
+                total += row.quantidade;
+            });
+            tableHTML += '</tbody><tfoot><tr class="ranking-total-row"><td><strong>TOTAL GERAL</strong></td><td><strong>' + total + '</strong></td></tr></tfoot></table>';
+            wrapper.innerHTML = tableHTML;
+        }
+        function renderizarDashboard(dados, dadosCancelados) { 
+            dadosExibidosAtualmente = dados;
+            dadosExibidosAtualmenteCancelados = dadosCancelados;
+            const placaresContainer = document.getElementById('placares'); 
+            const cidadesContainer = document.getElementById('visitas-cidade-table-wrapper'); 
+            const tecnicosContainer = document.getElementById('ranking-tecnicos-table-wrapper'); 
+            const dynamicPanelsWrapper = document.getElementById('dynamic-service-panels-wrapper'); 
+            const agendaTelContainer = document.getElementById('agenda-tel-summary-wrapper'); 
+            const canceladosContainer = document.getElementById('cancelados-table-wrapper');
+            
+            if (!dados || dados.length === 0) { 
+                const filtroAtivo = document.querySelector('input[name="dddFilter"]:checked')?.value !== 'todos'; 
+                const msg = filtroAtivo ? 'Nenhum dado encontrado para o responsável selecionado nesta data.' : 'Selecione uma data para ver os dados.'; 
+                placaresContainer.innerHTML = `<p>${msg}</p>`; 
+                [cidadesContainer, tecnicosContainer, dynamicPanelsWrapper, agendaTelContainer, canceladosContainer, document.getElementById('improdutivos-wrapper'), document.getElementById('produtivos-wrapper'), document.getElementById('nao-classificados-wrapper')].forEach(c => c.innerHTML = ''); 
+                document.getElementById('status').innerText = ''; 
+                return; 
+            } 
+            
+            const confirmadosContratosSet = new Set(confirmadosGlobais.map(c => c.contrato)); 
+            const stats = dados.reduce((acc, d) => { const status = getVisitStatus(d.codigo); if (acc.hasOwnProperty(status)) { acc[status]++; } return acc; }, { produtiva: 0, improdutiva: 0, pendente: 0, 'nao-classificado': 0 }); 
+            const totalVisitas = dados.length;
+            
+            const faltaDeMaterialCount = dados.filter(d => d.codigo === '104').length;
+
+            placaresContainer.innerHTML = `
+                <div class="card improdutivas">
+                    <div class="card-header"><span class="card-title">Falta de Material (Cód 104)</span></div>
+                    <div class="card-value">
+                        <span>${faltaDeMaterialCount}</span>
+                        <small>${(totalVisitas > 0 ? (faltaDeMaterialCount / totalVisitas * 100) : 0).toFixed(1)}% do total</small>
+                    </div>
+                </div>
+                <div class="card produtivas">
+                    <div class="card-header"><span class="card-title">Produtivas</span></div>
+                    <div class="card-value"><span>${stats.produtiva}</span><small>${(totalVisitas > 0 ? (stats.produtiva / totalVisitas * 100) : 0).toFixed(1)}% do total</small></div>
+                </div>
+                <div class="card improdutivas">
+                    <div class="card-header"><span class="card-title">Improdutivas</span></div>
+                    <div class="card-value"><span>${stats.improdutiva}</span><small>${(totalVisitas > 0 ? (stats.improdutiva / totalVisitas * 100) : 0).toFixed(1)}% do total</small></div>
+                </div>
+                <div class="card pendentes">
+                    <div class="card-header"><span class="card-title">Pendentes</span></div>
+                    <div class="card-value"><span>${stats.pendente}</span><small>${(totalVisitas > 0 ? (stats.pendente / totalVisitas * 100) : 0).toFixed(1)}% do total</small></div>
+                </div>
+                <div class="card agendadas">
+                    <div class="card-header"><span class="card-title">Total</span></div>
+                    <div class="card-value"><span>${totalVisitas}</span></div>
+                </div>`; 
+            
+            const resumoCodigos = dados.filter(d => d.codigo).reduce((acc, d) => { const status = getVisitStatus(d.codigo); if (status === 'pendente') return acc; if (!acc[d.codigo]) { acc[d.codigo] = { codigo: d.codigo, nome: d.nomeCodigo || codigoNomesMap.get(d.codigo) || '', quantidade: 0, status: status }; } acc[d.codigo].quantidade++; return acc; }, {}); 
+            renderCodigosBaixaTables(Object.values(resumoCodigos)); 
+            renderizarPaineisServico(dados); 
+            renderizarPainelAgendaTel(dados); 
+            renderizarPainelCancelados(dadosCancelados);
+            const capacityMap = getCityCapacityMap(); 
+            resumoCidadesGlobal = dados.reduce((acc, d) => { const cidade = (d.cidade || '(Sem Cidade)').toUpperCase(); if (!acc[cidade]) acc[cidade] = { cidade, produtivas: 0, improdutivas: 0, pendentes: 0, naoClassificados: 0, agendaQuente: 0, agendaFria: 0, box: 0, chip: 0, agendaTel: 0, total: 0, capacidade: capacityMap[cidade] || 0 }; const s = acc[cidade]; s.total++; const status = getVisitStatus(d.codigo); if (status === 'produtiva') s.produtivas++; else if (status === 'improdutiva') s.improdutivas++; else if (status === 'pendente') s.pendentes++; else s.naoClassificados++; if (d.horario === '08 - 12' || d.horario === '12 - 18') s.agendaQuente++; else if (d.horario === '08 - 22') s.agendaFria++; if (d.classe === 'Classe 14') s.box++; if (confirmadosContratosSet.has(d.contrato)) s.agendaTel++; return acc; }, {}); 
+            let cidadeHTML = `<table id="visitas-cidade-table"> <thead><tr> <th>Cidade</th><th class="col-produtiva">Produtivas</th><th class="col-improdutiva">Improdutivas</th><th class="col-pendente">Pendentes</th><th class="col-nao-classificado">Não Class.</th> <th>Agenda Quente</th><th>Agenda Fria</th><th class="col-box">Box</th><th class="col-chip">Chip</th> <th class="col-agenda-tel">Agenda Tel</th><th>Capacidade</th><th>Total</th> </tr></thead><tbody>`; 
+            const totais = { prod: 0, improd: 0, pend: 0, naoClass: 0, quente: 0, fria: 0, box: 0, chip: 0, tel: 0, cap: 0, total: 0 }; 
+            Object.values(resumoCidadesGlobal).sort((a,b) => a.cidade.localeCompare(b.cidade)).forEach(c => { cidadeHTML += `<tr> <td>${c.cidade}</td><td class="col-produtiva">${c.produtivas}</td><td class="col-improdutiva">${c.improdutivas}</td> <td class="col-pendente">${c.pendentes}</td><td class="col-nao-classificado">${c.naoClassificados}</td><td>${c.agendaQuente}</td><td>${c.agendaFria}</td> <td class="col-box">${c.box}</td><td class="col-chip">${c.chip}</td><td class="col-agenda-tel">${c.agendaTel}</td> <td><input type="number" value="${c.capacidade}" onchange="updateCityCapacity('${c.cidade}', this)"></td> <td><strong>${c.total}</strong></td> </tr>`; totais.prod += c.produtivas; totais.improd += c.improdutivas; totais.pend += c.pendentes; totais.naoClass += c.naoClassificados; totais.quente += c.agendaQuente; totais.fria += c.agendaFria; totais.box += c.box; totais.chip += c.chip; totais.tel += c.agendaTel; totais.cap += c.capacidade; totais.total += c.total; }); 
+            let tfootHTML = '<tfoot><tr class="ranking-total-row">'; 
+            const getPct = (valor) => totais.total > 0 ? ((valor / totais.total) * 100).toFixed(1) : '0.0'; 
+            tfootHTML += `<td><strong>TOTAL GERAL</strong></td>`; 
+            tfootHTML += `<td class="col-produtiva">${totais.prod}</td>`; 
+            tfootHTML += `<td class="col-improdutiva">${totais.improd}</td>`; 
+            tfootHTML += `<td class="col-pendente">${totais.pend}</td>`; 
+            tfootHTML += `<td class="col-nao-classificado">${totais.naoClass}</td>`; 
+            tfootHTML += `<td>${totais.quente}<br><small>(${getPct(totais.quente)}%)</small></td>`; 
+            tfootHTML += `<td>${totais.fria}<br><small>(${getPct(totais.fria)}%)</small></td>`; 
+            tfootHTML += `<td class="col-box">${totais.box}<br><small>(${getPct(totais.box)}%)</small></td>`; 
+            tfootHTML += `<td class="col-chip">${totais.chip}<br><small>(${getPct(totais.chip)}%)</small></td>`; 
+            tfootHTML += `<td class="col-agenda-tel">${totais.tel}<br><small>(${getPct(totais.tel)}%)</small></td>`; 
+            tfootHTML += `<td>${totais.cap}</td>`; 
+            tfootHTML += `<td><strong>${totais.total}</strong></td>`; 
+            tfootHTML += '</tr></tfoot>'; 
+            cidadesContainer.innerHTML = cidadeHTML + '</tbody>' + tfootHTML + '</table>'; 
+            const resumoTecnicos = dados.reduce((acc, d) => { const tecnico = d.tecnico || '(Sem Técnico)'; if (!acc[tecnico]) acc[tecnico] = { tecnico: tecnico, login: d.login, empresa: d.empresa, produtivas: 0, improdutivas: 0, pendentes: 0, naoClassificados: 0, agendaQuente: 0, agendaFria: 0, box: 0, chip: 0, agendaTel: 0, total: 0 }; const t = acc[tecnico]; t.total++; const status = getVisitStatus(d.codigo); if (status === 'produtiva') t.produtivas++; else if (status === 'improdutiva') t.improdutivas++; else if (status === 'pendente') t.pendentes++; else t.naoClassificados++; if (d.horario === '08 - 12' || d.horario === '12 - 18') t.agendaQuente++; else if (d.horario === '08 - 22') t.agendaFria++; if (d.classe === 'Classe 14') t.box++; if (confirmadosContratosSet.has(d.contrato)) t.agendaTel++; return acc; }, {}); 
+            let tecHTML = `<table> <thead><tr> <th>Técnico / Empresa</th><th class="col-produtiva">Produtivas</th><th class="col-improdutiva">Improdutivas</th><th class="col-pendente">Pendentes</th><th class="col-nao-classificado">Não Class.</th> <th>Agenda Quente</th><th>Agenda Fria</th><th class="col-box">Box</th><th class="col-chip">Chip</th> <th class="col-agenda-tel">Agenda Tel</th><th>Total</th> </tr></thead><tbody>`; 
+            Object.values(resumoTecnicos).sort((a, b) => { const isAZero = a.produtivas === 0 && a.improdutivas === 0; const isBZero = b.produtivas === 0 && b.improdutivas === 0; if (isAZero && !isBZero) { return -1; } if (!isAZero && isBZero) { return 1; } return b.produtivas - a.produtivas; }).forEach(t => { const isTecnicoZerado = t.produtivas === 0 && t.improdutivas === 0; const rowClass = isTecnicoZerado ? 'class="tecnico-zerado-row"' : ''; tecHTML += `<tr ${rowClass}> <td><strong>${t.login || t.tecnico}</strong><br><small style="color: var(--cor-texto-secundario);">${t.empresa}</small></td><td class="col-produtiva">${t.produtivas}</td><td class="col-improdutiva">${t.improdutivas}</td> <td class="col-pendente">${t.pendentes}</td><td class="col-nao-classificado">${t.naoClassificados}</td><td>${t.agendaQuente}</td><td>${t.agendaFria}</td> <td class="col-box">${t.box}</td><td class="col-chip">${t.chip}</td><td class="col-agenda-tel">${t.agendaTel}</td> <td><strong>${t.total}</strong></td> </tr>`; }); 
+            tecnicosContainer.innerHTML = tecHTML + '</tbody></table>'; 
+            document.getElementById('status').innerText = `Dashboard atualizado.`; 
+        }
+
+        // --- Configuração Inicial ---
+        async function initializeDashboard() {
+            loadDddMapping(); renderDddFilter(); loadConfiguredCodes(); carregarConfiguracaoPaineis(); loadIgnoredCanceledServices();
+            
+            if (localStorage.getItem('confirmadosTelDados')) { confirmadosGlobais = JSON.parse(localStorage.getItem('confirmadosTelDados')); confirmadosStatusDiv.textContent = `${confirmadosGlobais.length} agendamentos Tel carregados.`; }
+            if (localStorage.getItem('dx22Dados')) { dx22Globais = JSON.parse(localStorage.getItem('dx22Dados')); dx22StatusDiv.textContent = `${dx22Globais.length} contratos DX22 carregados.`; }
+            
+            const isVisitasCidadeVisible = localStorage.getItem('visitasCidadeVisible') !== 'false';
+            toggleVisitasCidade.checked = isVisitasCidadeVisible;
+            visitasCidadeContainer.style.display = isVisitasCidadeVisible ? 'block' : 'none';
+
+            await carregarDadosDaURL();
+
+            // Event Listeners Estáticos
+            dateFilter.addEventListener('change', aplicarFiltrosEAtualizar);
+            toggleConfigMode.addEventListener('change', () => { document.body.classList.toggle('config-mode-inactive', !toggleConfigMode.checked); aplicarFiltrosEAtualizar(); });
+            toggleVisitasCidade.addEventListener('change', () => { const isVisible = toggleVisitasCidade.checked; visitasCidadeContainer.style.display = isVisible ? 'block' : 'none'; localStorage.setItem('visitasCidadeVisible', isVisible); });
+            document.getElementById('add-panel-btn').addEventListener('click', adicionarNovoPainel);
+            document.getElementById('savePanelConfigBtn').addEventListener('click', salvarConfiguracaoModal);
+            document.getElementById('cancelPanelConfigBtn').addEventListener('click', fecharModalConfiguracao);
+            document.getElementById('manage-ddd-btn').addEventListener('click', openDddConfigModal);
+            document.getElementById('saveDddConfigBtn').addEventListener('click', saveDddConfig);
+            document.getElementById('cancelDddConfigBtn').addEventListener('click', closeDddConfigModal);
+            document.getElementById('btnExportarCapacidade').addEventListener('click', exportarCapacidadeCidades);
+            document.getElementById('btnExportarAgendaTel').addEventListener('click', exportarAgendaTel);
+            document.getElementById('btnExportarTecnicos').addEventListener('click', exportarDesempenhoTecnicos);
+            document.getElementById('btnExportarCodigosBaixa').addEventListener('click', exportarCodigosBaixa);
+            document.getElementById('btnExportarCancelados').addEventListener('click', exportarCancelados);
+            document.getElementById('manage-ignored-btn').addEventListener('click', openIgnoredServicesModal);
+            document.getElementById('saveIgnoredServicesBtn').addEventListener('click', saveIgnoredServicesConfig);
+            document.getElementById('cancelIgnoredServicesBtn').addEventListener('click', closeIgnoredServicesModal);
+            document.getElementById('ignoredServiceSearchInput').addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                document.querySelectorAll('#ignored-service-list-container label').forEach(label => {
+                    label.style.display = label.textContent.toLowerCase().includes(searchTerm) ? 'block' : 'none';
+                });
+            });
+            
+            // Event Delegation para painéis dinâmicos
+            document.getElementById('dynamic-service-panels-wrapper').addEventListener('click', (e) => { const target = e.target.closest('button'); if (!target) return; const action = target.dataset.action; const panelId = target.dataset.panelId; if (action === 'edit') abrirModalConfiguracao(panelId); if (action === 'delete') removerPainel(panelId); if (action === 'export') handleExportPainelServico(panelId); });
+            document.querySelectorAll('.filter-btn-codigos').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.filter-btn-codigos').forEach(b => b.classList.remove('active')); btn.classList.add('active'); const filter = btn.dataset.filter; const improdutivosWrapper = document.getElementById('improdutivos-wrapper'); const produtivosWrapper = document.getElementById('produtivos-wrapper'); const naoClassificadosWrapper = document.getElementById('nao-classificados-wrapper'); improdutivosWrapper.style.display = (filter === 'todos' || filter === 'improdutivos') ? 'block' : 'none'; produtivosWrapper.style.display = (filter === 'todos' || filter === 'produtivos') ? 'block' : 'none'; naoClassificadosWrapper.style.display = (filter === 'todos' || filter === 'nao-classificados') ? 'block' : 'none'; }); });
+            document.getElementById('serviceSearchInput').addEventListener('input', (e) => { const searchTerm = e.target.value.toLowerCase(); document.querySelectorAll('#service-list-container label').forEach(label => { const serviceName = label.innerText.toLowerCase(); label.style.display = serviceName.includes(searchTerm) ? 'block' : 'none'; }); });
+        
+            if ('showOpenFilePicker' in window) {
+                carregarConfirmadosBtn.addEventListener('click', carregarDadosConfirmados);
+                carregarDx22Btn.addEventListener('click', carregarDx22);
+            } else {
+                [carregarConfirmadosBtn, carregarDx22Btn].forEach(b => b.disabled = true);
+                folderStatusDiv.textContent = 'Seu navegador não suporta algumas funcionalidades.';
+            }
+        }
+
+        // Ponto de entrada da aplicação
+        window.addEventListener('load', () => {
+            const loggedInUser = sessionStorage.getItem('loggedInUserEmail');
+            if (loggedInUser) {
+                showDashboard(loggedInUser);
+            } else {
+                showLoginPage();
+            }
+        });
+    </script>
 </body>
 </html>
+```
