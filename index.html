@@ -1,4 +1,4 @@
-```html
+``html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -593,15 +593,14 @@
 
         // --- Funções de Carregamento de Arquivos ---
         // ######################################################################
-        // ### FUNÇÃO MODIFICADA COM DEPURAÇÃO ADICIONAL ###
+        // ### FUNÇÃO CORRIGIDA PARA O PROBLEMA DE FORMATO E CAMINHO ###
         // ######################################################################
         async function carregarDadosDaURL() {
-            const baseURL = ""; // A base já está implícita por estar na mesma pasta
+            const baseURL = ""; // Usamos caminhos relativos, então a base é vazia
             folderStatusDiv.textContent = 'Buscando arquivo de manifesto...';
             document.getElementById('erro').textContent = '';
-            let manifestContentForError = ''; // Variável para guardar o conteúdo para a mensagem de erro
 
-            // Função auxiliar interna para processar os arquivos, sem alterações.
+            // Função auxiliar para processar cada arquivo XLSX. Nenhuma alteração aqui.
             const fetchAndProcessFile = async (fileName) => {
                 const url = baseURL + encodeURIComponent(fileName);
                 const response = await fetch(url, { cache: 'no-cache' });
@@ -615,7 +614,6 @@
                 const range = XLSX.utils.decode_range(sheet['!ref']);
                 const processed = [];
                 const canceled = [];
-
                 for (let R = 1; R <= range.e.r; ++R) {
                     const get = (col) => sheet[`${col}${R + 1}`]?.v || '';
                     const dataVal = get('C');
@@ -631,12 +629,10 @@
                         empresa: formatarEmpresa((get('DA') || '').toString().trim()),
                         tipo_os: (get('W') || '').toString().trim()
                     };
-
                     if (rowData.statusAtividade.toLowerCase().startsWith('cancelled')) {
                         canceled.push(rowData); continue;
                     }
                     if (!["Classe 8", "Classe 9", "Classe 10", "Classe 12", "Classe 14"].includes(rowData.classe)) continue;
-
                     const rawCodigoAH = String(get('AH') || '').trim();
                     const matchCompleto = rawCodigoAH.match(/^(\d+)\s*-\s*(.*)$/);
                     let codigoExtraido = '', nomeCodigo = '';
@@ -655,48 +651,32 @@
             };
 
             try {
-                // 1. Buscar o manifesto
-                const manifestResponse = await fetch('../manifesto.json', { cache: 'no-cache' });
+                // 1. Buscar o manifesto.json (na MESMA pasta do index.html)
+                const manifestResponse = await fetch('manifesto.json', { cache: 'no-cache' });
                 if (!manifestResponse.ok) {
-                    throw new Error(`Falha ao buscar o manifesto.json (Status: ${manifestResponse.status})`);
+                    throw new Error(`Falha ao buscar o manifesto.json (Status: ${manifestResponse.status}). Verifique se o arquivo está na mesma pasta que o index.html.`);
                 }
+                const manifestData = await manifestResponse.json();
 
-                // DEBUG: Logar o texto bruto para ver se é um JSON válido
-                const manifestText = await manifestResponse.text();
-                manifestContentForError = manifestText; // Guarda para usar no erro, se necessário
-                console.log('--- DEBUG: Conteúdo bruto recebido de manifesto.json ---');
-                console.log(manifestText);
-
-                const manifestData = JSON.parse(manifestText);
-                
-                // DEBUG: Logar o objeto JSON parseado
-                console.log('--- DEBUG: Objeto JavaScript após parse do manifesto.json ---');
-                console.log(manifestData);
-
-                // 2. Processar a lista de arquivos
+                // 2. Processar a lista de arquivos USANDO A CHAVE CORRETA "Name"
                 const nomesArquivos = manifestData
-                    .map(entry => entry.fileName) // Pega o valor da chave "fileName"
-                    .filter(name => name && typeof name === 'string' && name.toLowerCase().endsWith('.xlsx')); // Filtra apenas nomes válidos que terminam com .xlsx
+                    .map(entry => entry.Name) // <-- MUDANÇA CRÍTICA: de entry.fileName para entry.Name
+                    .filter(name => name && typeof name === 'string' && name.toLowerCase().endsWith('.xlsx'));
                 
-                // DEBUG: Logar a lista final de arquivos que serão buscados
-                console.log('--- DEBUG: Lista final de arquivos .xlsx para carregar ---');
-                console.log(nomesArquivos);
-
                 if (nomesArquivos.length === 0) {
-                    // ERRO MELHORADO: Inclui o conteúdo lido na mensagem de erro
-                    throw new Error(`O manifesto.json não contém arquivos .xlsx válidos para carregar. Conteúdo lido: ${manifestContentForError}`);
+                    throw new Error(`O manifesto.json foi lido, mas não contém arquivos .xlsx válidos na propriedade "Name". Verifique a saída do seu Logic App.`);
                 }
 
                 folderStatusDiv.textContent = `Manifesto lido. Carregando ${nomesArquivos.length} arquivo(s)...`;
 
-                // 3. Buscar os arquivos de dados
+                // 3. Buscar os arquivos de dados (que também devem estar na mesma pasta)
                 const promises = await Promise.allSettled(nomesArquivos.map(fetchAndProcessFile));
                 const successfulResults = promises
                     .filter(p => p.status === 'fulfilled' && p.value)
                     .map(p => p.value);
 
                 if (successfulResults.length === 0) {
-                    throw new Error("Nenhum arquivo .xlsx da lista do manifesto pôde ser carregado com sucesso.");
+                    throw new Error("Nenhum arquivo .xlsx da lista do manifesto pôde ser carregado com sucesso. Verifique se os nomes e a localização dos arquivos estão corretos.");
                 }
 
                 // 4. Consolidar e renderizar
@@ -708,13 +688,12 @@
             } catch (error) {
                 console.error('Erro detalhado ao carregar dados:', error);
                 folderStatusDiv.textContent = 'Falha ao carregar dados.';
-                // Mensagem de erro na tela fica mais informativa
-                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique o conteúdo do manifesto.json e a disponibilidade dos arquivos.`;
+                document.getElementById('erro').textContent = `Erro: ${error.message}`;
                 renderizarDashboard([], []);
             }
         }
         // ####################################################################
-        // ### FIM DA FUNÇÃO MODIFICADA ###
+        // ### FIM DA FUNÇÃO CORRIGIDA ###
         // ####################################################################
 
         async function carregarDadosConfirmados() { try { const [fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Excel Files', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] }); const file = await fileHandle.getFile(); confirmadosStatusDiv.textContent = `Analisando...`; const parsedData = await parseConfirmadosExcel(file); confirmadosGlobais = parsedData; localStorage.setItem('confirmadosTelDados', JSON.stringify(confirmadosGlobais)); aplicarFiltrosEAtualizar(); confirmadosStatusDiv.textContent = `${confirmadosGlobais.length} agendamentos Tel carregados.`; } catch (error) { if (error.name !== 'AbortError') console.error('Erro:', error); } }
@@ -1083,5 +1062,3 @@
 </body>
 </html>
 ```
-
-
