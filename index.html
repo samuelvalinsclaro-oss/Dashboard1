@@ -432,7 +432,7 @@
         // Constantes
         const cityToDddMap = { 'AGUDOS': '14', 'AMERICANA': '19', 'ANDRADINA': '18', 'ARACATUBA': '18', 'ARARAQUARA': '16', 'ARARAS': '19', 'AVARE': '14', 'BADY BASSITT': '17', 'BARRETOS': '17', 'BATATAIS': '16', 'BAURU': '14', 'BIRIGUI': '18', 'BOITUVA': '15', 'BOTUCATU': '14', 'CACAPAVA': '12', 'CAMPINAS': '19', 'CAMPOS DO JORDAO': '12', 'CAPIVARI': '19', 'CARAGUATATUBA': '12', 'CATANDUVA': '17', 'CUBATAO': '13', 'DESCALVADO': '19', 'DRACENA': '18', 'FERNANDOPOLIS': '17', 'FRANCA': '16', 'GARCA': '14', 'GUAIRA': '17', 'GUARARAPES': '18', 'GUARATINGUETA': '12', 'GUARUJA': '13', 'HORTOLANDIA': '19', 'INDAIATUBA': '19', 'IPERO': '15', 'ITANHAEM': '13', 'ITAPETININGA': '15', 'JACAREI': '12', 'JAGUARIUNA': '19', 'JAU': '14', 'JOSE BONIFACIO': '17', 'LEME': '19', 'LENCOIS PAULISTA': '14', 'LIMEIRA': '19', 'LINS': '14', 'LORENA': '12', 'LOUVEIRA': '19', 'MARILIA': '14', 'MATAO': '16', 'MIRASSOL': '17', 'MOCOCA': '19', 'MOGI GUACU': '19', 'MOGI MIRIM': '19', 'MONGAGUA': '13', 'NOVA ODESSA': '19', 'PAULINIA': '19', 'PEDREIRA': '19', 'PENAPOLIS': '18', 'PERUIBE': '13', 'PINDAMONHANGABA': '12', 'PIRACICABA': '19', 'PIRASSUNGUGA': '19', 'PORTO FELIZ': '15', 'PORTO FERREIRA': '19', 'PRAIA GRANDE': '13', 'PRESIDENTE PRUDENTE': '18', 'RAFARD': '19', 'REGISTRO': '13', 'RIBEIRAO PRETO': '16', 'RIO CLARO': '19', 'SANTA BARBARA D OESTE': '19', 'SANTA CRUZ DO RIO PARDO': '14', 'SANTA ROSA DE VITERBO': '16', 'SANTOS': '13', 'SAO CARLOS': '16', 'SAO JOAO DA BOA VISTA': '19', 'SAO JOSE DO RIO PARDO': '19', 'SAO JOSE DO RIO PRETO': '17', 'SAO JOSE DOS CAMPOS': '12', 'SAO SEBASTIAO': '12', 'SAO VICENTE': '13', 'SERTAOZINHO': '16', 'SOROCABA': '15', 'SUMARE': '19', 'TATUI': '15', 'TAUBATE': '12', 'TREMEMBE': '12', 'UBATUBA': '12', 'VALINHOS': '19', 'VALPARAISO': '18', 'VINHEDO': '19', 'VOTORANTIM': '15' };
         const SERVICOS_IGNORADOS_DEFAULT = [ '21 - SUBSTITUICAO DE CONTROLE REMOTO ANALOGICA', '86 - RETIRAR PONTO VOIP', '208 - ENVIO DE CHIP VIA TECNICO' ];
-        const CAPACIDADE_PREDEFINIDA_CIDADES = { 'AGUDOS': 5, 'AMERICANA': 50, 'ANDRADINA': 5, 'ARACATUBA': 20, 'ARARAQUARA': 100, 'ARARAS': 25, 'AVARE': 5, 'BADY BASSITT': 5, 'BARRETOS': 20, 'BATATAIS': 5, 'BAURU': 75, 'BIRIGUI': 5, 'BOITUVA': 10, 'BOTUCATU': 25, 'CACAPAVA': 25, 'CAMPINAS': 175, 'CAMPOS DO JORDAO': 5, 'CAPIVARI': 10, 'CARAGUATATUBA': 50, 'CATANDUVA': 5, 'CUBATAO': 25, 'DESCALVADO': 10, 'DRACENA': 5, 'FERNANDOPOLIS': 5, 'FRANCA': 70, 'GARCA': 5, 'GUAIRA': 20, 'GUARARAPES': 5, 'GUARATINGUETA': 30, 'GUARUJA': 50, 'HORTOLANDIA': 25, 'INDAIATUBA': 60, 'IPERO': 10, 'ITANHAEM': 13, 'ITAPETININGA': 15, 'JACAREI': 12, 'JAGUARIUNA': 19, 'JAU': 25, 'JOSE BONIFACIO': 5, 'LEME': 10, 'LENCOIS PAULISTA': 5, 'LIMEIRA': 25, 'LINS': 5, 'LORENA': 20, 'LOUVEIRA': 5, 'MARILIA': 75, 'MATAO': 5, 'MIRASSOL': 5, 'MOCOCA': 10, 'MOGI GUACU': 15, 'MOGI MIRIM': 15, 'MONGAGUA': 15, 'NOVA ODESSA': 5, 'PAULINIA': 20, 'PEDREIRA': 10, 'PENAPOLIS': 5, 'PERUIBE': 15, 'PINDAMONHANGABA': 12, 'PIRACICABA': 75, 'PIRASSUNGUGA': 10, 'PORTO FELIZ': 25, 'PORTO FERREIRA': 10, 'PRAIA GRANDE': 100, 'PRESIDENTE PRUDENTE': 25, 'RAFARD': 19, 'REGISTRO': 4, 'RIBEIRAO PRETO': 100, 'RIO CLARO': 25, "SANTA BARBARA D OESTE": 25, 'SANTA CRUZ DO RIO PARDO': 25, 'SANTA ROSA DE VITERBO': 5, 'SANTOS': 120, 'SAO CARLOS': 85, 'SAO JOAO DA BOA VISTA': 25, 'SAO JOSE DO RIO PARDO': 10, 'SAO JOSE DO RIO PRETO': 60, 'SAO JOSE DOS CAMPOS': 160, 'SAO SEBASTIAO': 20, 'SAO VICENTE': 50, 'SERTAOZINHO': 20, 'SOROCABA': 200, 'SUMARE': 20, 'TATUI': 25, 'TAUBATE': 60, 'TREMEMBE': 12, 'UBATUBA': 20, 'VALINHOS': 12, 'VALPARAISO': 5, 'VINHEDO': 12, 'VOTORANTIM': 25 };
+        const CAPACIDADE_PREDEFINIDA_CIDADES = { 'AGUDOS': 5, 'AMERICANA': 50, 'ANDRADINA': 5, 'ARACATUBA': 20, 'ARARAQUARA': 100, 'ARARAS': 25, 'AVARE': 5, 'BADY BASSITT': 5, 'BARRETOS': 20, 'BATATAIS': 5, 'BAURU': 75, 'BIRIGUI': 5, 'BOITUVA': 10, 'BOTUCATU': 25, 'CACAPAVA': 25, 'CAMPINAS': 175, 'CAMPOS DO JORDAO': 5, 'CAPIVARI': 10, 'CARAGUATATUBA': 50, 'CATANDUVA': 5, 'CUBATAO': 25, 'DESCALVADO': 10, 'DRACENA': 5, 'FERNANDOPOLIS': 5, 'FRANCA': 70, 'GARCA': 5, 'GUAIRA': 20, 'GUARARAPES': 5, 'GUARATINGUETA': 30, 'GUARUJA': 50, 'HORTOLANDIA': 25, 'INDAIATUBA': 60, 'IPERO': 10, 'ITANHAEM': 25, 'ITAPETININGA': 25, 'JACAREI': 25, 'JAGUARIUNA': 10, 'JAU': 25, 'JOSE BONIFACIO': 5, 'LEME': 10, 'LENCOIS PAULISTA': 5, 'LIMEIRA': 25, 'LINS': 5, 'LORENA': 20, 'LOUVEIRA': 5, 'MARILIA': 75, 'MATAO': 5, 'MIRASSOL': 5, 'MOCOCA': 10, 'MOGI GUACU': 15, 'MOGI MIRIM': 15, 'MONGAGUA': 15, 'NOVA ODESSA': 5, 'PAULINIA': 20, 'PEDREIRA': 10, 'PENAPOLIS': 5, 'PERUIBE': 15, 'PINDAMONHANGABA': 25, 'PIRACICABA': 75, 'PIRASSUNGUGA': 10, 'PORTO FELIZ': 25, 'PORTO FERREIRA': 10, 'PRAIA GRANDE': 100, 'PRESIDENTE PRUDENTE': 25, 'RAFARD': 19, 'REGISTRO': 4, 'RIBEIRAO PRETO': 100, 'RIO CLARO': 25, "SANTA BARBARA D OESTE": 25, 'SANTA CRUZ DO RIO PARDO': 25, 'SANTA ROSA DE VITERBO': 5, 'SANTOS': 120, 'SAO CARLOS': 85, 'SAO JOAO DA BOA VISTA': 25, 'SAO JOSE DO RIO PARDO': 10, 'SAO JOSE DO RIO PRETO': 60, 'SAO JOSE DOS CAMPOS': 160, 'SAO SEBASTIAO': 20, 'SAO VICENTE': 50, 'SERTAOZINHO': 20, 'SOROCABA': 200, 'SUMARE': 20, 'TATUI': 25, 'TAUBATE': 60, 'TREMEMBE': 25, 'UBATUBA': 20, 'VALINHOS': 12, 'VALPARAISO': 5, 'VINHEDO': 12, 'VOTORANTIM': 25 };
         const SERVICOS_CANCELADOS_IGNORADOS_DEFAULT = [
             'ALMOXARIFADO', 'APOIO A OUTRO TECNICO', 'APOIO MATERIAL',
             'AUSENCIA POR MOTIVO MEDICO', 'CONSTRUCAO MDU GPON', 'CORTE NO DROP',
@@ -592,121 +592,131 @@
         }
 
         // --- Funções de Carregamento de Arquivos ---
+        // ######################################################################
+        // ### FUNÇÃO MODIFICADA COM DEPURAÇÃO ADICIONAL ###
+        // ######################################################################
         async function carregarDadosDaURL() {
-            const baseURL = "https://dashboardclarobrasil.z15.web.core.windows.net/";
-            folderStatusDiv.textContent = `Buscando manifesto de arquivos...`;
+            const baseURL = ""; // A base já está implícita por estar na mesma pasta
+            folderStatusDiv.textContent = 'Buscando arquivo de manifesto...';
             document.getElementById('erro').textContent = '';
+            let manifestContentForError = ''; // Variável para guardar o conteúdo para a mensagem de erro
+
+            // Função auxiliar interna para processar os arquivos, sem alterações.
+            const fetchAndProcessFile = async (fileName) => {
+                const url = baseURL + encodeURIComponent(fileName);
+                const response = await fetch(url, { cache: 'no-cache' });
+                if (!response.ok) {
+                    console.warn(`Não foi possível encontrar ou carregar o arquivo: ${fileName}`);
+                    return null;
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const range = XLSX.utils.decode_range(sheet['!ref']);
+                const processed = [];
+                const canceled = [];
+
+                for (let R = 1; R <= range.e.r; ++R) {
+                    const get = (col) => sheet[`${col}${R + 1}`]?.v || '';
+                    const dataVal = get('C');
+                    const rowData = {
+                        tecnico: (get('A') || '').toString().trim(),
+                        login: (get('B') || '').toString().trim(),
+                        data: typeof dataVal === 'number' ? new Date(Math.round((dataVal - 25569) * 86400 * 1000)).toLocaleDateString('pt-BR') : (get('C') || '').toString().trim(),
+                        statusAtividade: (get('D') || '').toString().trim(),
+                        cidade: (get('I') || '').toString().trim().toUpperCase(),
+                        horario: (get('M') || '').toString().trim(),
+                        contrato: String(get('Y')).trim().toUpperCase(),
+                        classe: (get('AF') || '').toString().trim(),
+                        empresa: formatarEmpresa((get('DA') || '').toString().trim()),
+                        tipo_os: (get('W') || '').toString().trim()
+                    };
+
+                    if (rowData.statusAtividade.toLowerCase().startsWith('cancelled')) {
+                        canceled.push(rowData); continue;
+                    }
+                    if (!["Classe 8", "Classe 9", "Classe 10", "Classe 12", "Classe 14"].includes(rowData.classe)) continue;
+
+                    const rawCodigoAH = String(get('AH') || '').trim();
+                    const matchCompleto = rawCodigoAH.match(/^(\d+)\s*-\s*(.*)$/);
+                    let codigoExtraido = '', nomeCodigo = '';
+                    if (matchCompleto) {
+                        codigoExtraido = matchCompleto[1]; nomeCodigo = matchCompleto[2].trim();
+                    } else {
+                        const matchNumero = rawCodigoAH.match(/^(\d+)/);
+                        codigoExtraido = matchNumero ? matchNumero[1] : '';
+                    }
+                    if (codigoExtraido && nomeCodigo && !codigoNomesMap.has(codigoExtraido)) {
+                        codigoNomesMap.set(codigoExtraido, nomeCodigo);
+                    }
+                    processed.push({ ...rowData, codigo: codigoExtraido, nomeCodigo: nomeCodigo });
+                }
+                return { processed, canceled };
+            };
 
             try {
-                // 1. Buscar o Manifesto
-                const manifestURL = baseURL + 'manifesto.json';
-                const manifestResponse = await fetch(manifestURL, { cache: 'no-cache' });
-
+                // 1. Buscar o manifesto
+                const manifestResponse = await fetch('manifesto.json', { cache: 'no-cache' });
                 if (!manifestResponse.ok) {
-                    throw new Error(`Não foi possível carregar o manifesto.json. Status: ${manifestResponse.status}`);
+                    throw new Error(`Falha ao buscar o manifesto.json (Status: ${manifestResponse.status})`);
                 }
 
-                const manifestData = await manifestResponse.json();
+                // DEBUG: Logar o texto bruto para ver se é um JSON válido
+                const manifestText = await manifestResponse.text();
+                manifestContentForError = manifestText; // Guarda para usar no erro, se necessário
+                console.log('--- DEBUG: Conteúdo bruto recebido de manifesto.json ---');
+                console.log(manifestText);
 
-                // 2. Processar a Lista de Arquivos
-                const xlsxFiles = manifestData
-                    .filter(item => typeof item.fileName === 'string' && item.fileName.toLowerCase().endsWith('.xlsx'))
-                    .map(item => item.fileName);
-
-                if (xlsxFiles.length === 0) {
-                    throw new Error("O manifesto.json não contém arquivos .xlsx válidos para carregar.");
-                }
-
-                folderStatusDiv.textContent = `Carregando ${xlsxFiles.length} arquivos de produção...`;
-
-                // Função auxiliar para buscar e processar um único arquivo (mantida inalterada)
-                const fetchAndProcessFile = async (fileName) => {
-                    const url = baseURL + encodeURIComponent(fileName); // Usa encodeURIComponent para nomes com caracteres especiais
-                    const response = await fetch(url, { cache: 'no-cache' });
-                    if (!response.ok) {
-                        // Retorna nulo em vez de um erro para que Promise.allSettled possa identificá-lo como falha.
-                        console.warn(`Não foi possível encontrar ou carregar o arquivo: ${fileName}`);
-                        return null; 
-                    }
-                    const arrayBuffer = await response.arrayBuffer();
-                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const range = XLSX.utils.decode_range(sheet['!ref']);
-                    const processed = [];
-                    const canceled = [];
-
-                    for (let R = 1; R <= range.e.r; ++R) {
-                        const get = (col) => sheet[`${col}${R + 1}`]?.v || '';
-                        const dataVal = get('C');
-                        const rowData = {
-                            tecnico: (get('A') || '').toString().trim(),
-                            login: (get('B') || '').toString().trim(),
-                            data: typeof dataVal === 'number' ? new Date(Math.round((dataVal - 25569) * 86400 * 1000)).toLocaleDateString('pt-BR') : (get('C') || '').toString().trim(),
-                            statusAtividade: (get('D') || '').toString().trim(),
-                            cidade: (get('I') || '').toString().trim().toUpperCase(),
-                            horario: (get('M') || '').toString().trim(),
-                            contrato: String(get('Y')).trim().toUpperCase(),
-                            classe: (get('AF') || '').toString().trim(),
-                            empresa: formatarEmpresa((get('DA') || '').toString().trim()),
-                            tipo_os: (get('W') || '').toString().trim()
-                        };
-
-                        if (rowData.statusAtividade.toLowerCase().startsWith('cancelled')) {
-                            canceled.push(rowData); continue;
-                        }
-                        if (!["Classe 8", "Classe 9", "Classe 10", "Classe 12", "Classe 14"].includes(rowData.classe)) continue;
-
-                        const rawCodigoAH = String(get('AH') || '').trim();
-                        const matchCompleto = rawCodigoAH.match(/^(\d+)\s*-\s*(.*)$/);
-                        let codigoExtraido = '', nomeCodigo = '';
-                        if (matchCompleto) {
-                            codigoExtraido = matchCompleto[1]; nomeCodigo = matchCompleto[2].trim();
-                        } else {
-                            const matchNumero = rawCodigoAH.match(/^(\d+)/);
-                            codigoExtraido = matchNumero ? matchNumero[1] : '';
-                        }
-                        if (codigoExtraido && nomeCodigo && !codigoNomesMap.has(codigoExtraido)) {
-                            codigoNomesMap.set(codigoExtraido, nomeCodigo);
-                        }
-                        processed.push({ ...rowData, codigo: codigoExtraido, nomeCodigo: nomeCodigo });
-                    }
-                    return { processed, canceled };
-                };
-
-                // 3. Buscar os Arquivos de Dados
-                const promises = await Promise.allSettled(xlsxFiles.map(fetchAndProcessFile));
-
-                // 4. Consolidar os Dados
-                const allProcessed = [];
-                const allCanceled = [];
-
-                promises
-                    .filter(p => p.status === 'fulfilled' && p.value) // Filtra apenas resultados bem-sucedidos e não nulos
-                    .map(p => p.value)
-                    .forEach(result => {
-                        allProcessed.push(...result.processed);
-                        allCanceled.push(...result.canceled);
-                    });
+                const manifestData = JSON.parse(manifestText);
                 
-                if (allProcessed.length === 0 && allCanceled.length === 0) {
-                    throw new Error("Nenhum arquivo de dados .xlsx foi carregado com sucesso a partir do manifesto.");
+                // DEBUG: Logar o objeto JSON parseado
+                console.log('--- DEBUG: Objeto JavaScript após parse do manifesto.json ---');
+                console.log(manifestData);
+
+                // 2. Processar a lista de arquivos
+                const nomesArquivos = manifestData
+                    .map(entry => entry.fileName) // Pega o valor da chave "fileName"
+                    .filter(name => name && typeof name === 'string' && name.toLowerCase().endsWith('.xlsx')); // Filtra apenas nomes válidos que terminam com .xlsx
+                
+                // DEBUG: Logar a lista final de arquivos que serão buscados
+                console.log('--- DEBUG: Lista final de arquivos .xlsx para carregar ---');
+                console.log(nomesArquivos);
+
+                if (nomesArquivos.length === 0) {
+                    // ERRO MELHORADO: Inclui o conteúdo lido na mensagem de erro
+                    throw new Error(`O manifesto.json não contém arquivos .xlsx válidos para carregar. Conteúdo lido: ${manifestContentForError}`);
                 }
 
-                // Garante que dadosCanceladosGlobais também tenham o dateObj
-                dadosCanceladosGlobais = allCanceled.map(d => ({ ...d, dateObj: parsePtBrDate(d.data) })).filter(d => d.dateObj);
+                folderStatusDiv.textContent = `Manifesto lido. Carregando ${nomesArquivos.length} arquivo(s)...`;
 
-                // 5. Renderizar o Dashboard
+                // 3. Buscar os arquivos de dados
+                const promises = await Promise.allSettled(nomesArquivos.map(fetchAndProcessFile));
+                const successfulResults = promises
+                    .filter(p => p.status === 'fulfilled' && p.value)
+                    .map(p => p.value);
+
+                if (successfulResults.length === 0) {
+                    throw new Error("Nenhum arquivo .xlsx da lista do manifesto pôde ser carregado com sucesso.");
+                }
+
+                // 4. Consolidar e renderizar
+                const allProcessed = successfulResults.map(r => r.processed).flat();
+                const allCanceled = successfulResults.map(r => r.canceled).flat();
+                dadosCanceladosGlobais = allCanceled.map(d => ({ ...d, dateObj: parsePtBrDate(d.data) })).filter(d => d.dateObj);
                 processarEExibirDados(allProcessed);
 
             } catch (error) {
-                // 6. Tratamento de Erro
-                console.error('Erro ao carregar dados:', error);
+                console.error('Erro detalhado ao carregar dados:', error);
                 folderStatusDiv.textContent = 'Falha ao carregar dados.';
-                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique o arquivo manifesto.json e a disponibilidade dos arquivos.`;
-                renderizarDashboard([], []); // Limpa o dashboard em caso de erro
+                // Mensagem de erro na tela fica mais informativa
+                document.getElementById('erro').textContent = `Erro: ${error.message}. Verifique o conteúdo do manifesto.json e a disponibilidade dos arquivos.`;
+                renderizarDashboard([], []);
             }
         }
-        
+        // ####################################################################
+        // ### FIM DA FUNÇÃO MODIFICADA ###
+        // ####################################################################
+
         async function carregarDadosConfirmados() { try { const [fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Excel Files', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] }); const file = await fileHandle.getFile(); confirmadosStatusDiv.textContent = `Analisando...`; const parsedData = await parseConfirmadosExcel(file); confirmadosGlobais = parsedData; localStorage.setItem('confirmadosTelDados', JSON.stringify(confirmadosGlobais)); aplicarFiltrosEAtualizar(); confirmadosStatusDiv.textContent = `${confirmadosGlobais.length} agendamentos Tel carregados.`; } catch (error) { if (error.name !== 'AbortError') console.error('Erro:', error); } }
         async function carregarDx22() { try { const [fileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Excel Files', accept: { 'application/vnd.ms-excel.sheet.binary.macroenabled.12': ['.xlsb'] } }] }); const file = await fileHandle.getFile(); dx22StatusDiv.textContent = `Analisando DX22...`; const parsedData = await parseDx22Excel(file); dx22Globais = parsedData; localStorage.setItem('dx22Dados', JSON.stringify(dx22Globais)); aplicarFiltrosEAtualizar(); dx22StatusDiv.textContent = `${dx22Globais.length} contratos DX22 carregados.`; } catch (error) { if (error.name !== 'AbortError') console.error('Erro ao carregar DX22:', error); } }
         
